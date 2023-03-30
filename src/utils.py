@@ -1,15 +1,7 @@
-from pathlib import Path
-import shutil
 import tkinter as tk
-from tkinter import filedialog as fd
-from PIL import Image
 
 import numpy as np
 from matplotlib import colors
-import matplotlib.pyplot as plt
-from skimage.io import imread
-from skimage.transform import resize_local_mean as resize
-from skimage import draw
 
 
 def fft(arr, modulus=False):
@@ -34,10 +26,6 @@ def log(comp_arr):
 
 def normalize(arr):
     return (arr - np.min(arr)) / (np.max(arr) - np.min(arr))
-
-
-def to_8bit(arr):
-    arr = 255 * normalize(arr)
 
 
 def pad_to_size(arr, N_new):
@@ -97,79 +85,6 @@ def amp_to_photo_image(image):
     height, width = image.shape
     data = f'P5 {width} {height} 255 '.encode() + image.astype(np.uint8).tobytes()
     return tk.PhotoImage(width=width, height=height, data=data, format='PPM')
-
-
-def add_phase_wheel(ax, corner, size):
-    # TODO
-    pass
-
-
-def get_save_dir():
-    root = tk.Tk()
-    root.withdraw()
-    return fd.askdirectory()
-
-
-def get_file():
-    """Opens a GUI dialog to select a single file"""
-    root = tk.Tk()
-    root.withdraw()
-    try:
-        return fd.askopenfilename()
-    except KeyError:
-        return None
-
-
-def save_file(ext):
-    """Opens a save-as dialog"""
-    root = tk.Tk()
-    root.withdraw()
-    try:
-        return fd.asksaveasfilename(defaultextension=ext, filetypes=[(ext.lower(), ext.upper())])
-    except KeyError:
-        return
-
-
-def open_image(as_square=False):
-    root = tk.Tk()
-    root.withdraw()
-    try:
-        fname = fd.askopenfilename()
-    except KeyError:
-        return
-    img = imread(fname, as_gray=True)
-    if as_square:
-        size = np.min(img.shape)
-        img = resize(img, (size, size))
-    return img
-
-
-def save_array_as_image(img, cmap='plasma'):
-    """Saves a 2D array as an image using matplotlib. """
-    root = tk.Tk()
-    root.withdraw()
-    try:
-        fname = fd.asksaveasfilename(defaultextension='png', filetypes=[('PNG', 'png')])
-    except KeyError:
-        return
-    plt.imsave(fname, img, cmap=cmap)
-
-
-def save_gif(images):
-    """Saves a 3D array (image stack) as an animated gif."""
-    root = tk.Tk()
-    root.withdraw()
-    try:
-        fname = fd.asksaveasfilename(defaultextension='gif')
-    except KeyError:
-        return
-    dname = Path(__file__).parent
-    temp = dname / 'temp'
-    temp.mkdir()
-    [plt.imsave(f'{temp}/im_{n:03}.png', im, cmap='gray', vmin=0, vmax=1) for n, im in enumerate(images)]
-    images = [Image.open(f'{temp}/im_{n:03}.png') for n in range(len(images))]
-    images[0].save(fname, save_all=True, append_images=images[1:], duration=300, loop=0)
-    shutil.rmtree(temp)
 
 
 if __name__ == "__main__":
