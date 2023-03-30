@@ -1,13 +1,15 @@
+from pathlib import Path
+import shutil
+import tkinter as tk
+from tkinter import filedialog as fd
+from PIL import Image
+
 import numpy as np
 from matplotlib import colors
 import matplotlib.pyplot as plt
-import tkinter as tk
-from tkinter import filedialog as fd
 from skimage.io import imread
-from skimage.transform import resize
-from PIL import Image
-from pathlib import Path
-import shutil
+from skimage.transform import resize_local_mean as resize
+from skimage import draw
 
 
 def fft(arr, modulus=False):
@@ -34,6 +36,10 @@ def normalize(arr):
     return (arr - np.min(arr)) / (np.max(arr) - np.min(arr))
 
 
+def to_8bit(arr):
+    arr = 255 * normalize(arr)
+
+
 def pad_to_size(arr, N_new):
     # Assuming square array
     N = arr.shape[0]
@@ -46,12 +52,51 @@ def pad_to_size(arr, N_new):
         raise IndexError(f'Error padding to desired size: N_new={N_new}, N_old={N}, N_pad={pad}, N_out={2*pad + N}')
 
 
-def comp_to_rgb(comp_img):
+def complex_composite_image(comp_img, dark_background=False):
     amp = normalize(np.abs(comp_img))
     phi = normalize(np.angle(comp_img))
     one = np.ones_like(amp)
-    hsv = np.dstack((phi, one, amp))
+    if dark_background:
+        hsv = np.dstack((phi, one, amp))
+    else:
+        hsv = np.dstack((phi, amp, one))
     return colors.hsv_to_rgb(hsv)
+
+
+def direct_to_photo_image(ds_image):
+    amp = normalize(np.abs(ds_image))
+    phi = normalize(np.angle(ds_image))
+    one = np.ones_like(amp)
+    image = 255 * colors.hsv_to_rgb(np.dstack((phi, one, amp)))
+    height, width = image.shape[:2]
+    data = f'P6 {width} {height} 255 '.encode() + image.astype(np.uint8).tobytes()
+    return tk.PhotoImage(width=width, height=height, data=data, format='PPM')
+
+
+def fourier_to_photo_image(fs_image):
+    amp = normalize(np.log(np.abs(fs_image)+1))
+    phi = normalize(np.angle(fs_image))
+    one = np.ones_like(amp)
+    image = 255 * colors.hsv_to_rgb(np.dstack((phi, one, amp)))
+    height, width = image.shape[:2]
+    data = f'P6 {width} {height} 255 '.encode() + image.astype(np.uint8).tobytes()
+    return tk.PhotoImage(width=width, height=height, data=data, format='PPM')
+
+
+def phase_to_photo_image(image):
+    image = normalize(image)
+    one = np.ones_like(image)
+    image = 255 * colors.hsv_to_rgb(np.dstack((image, one, one)))
+    height, width = image.shape[:2]
+    data = f'P6 {width} {height} 255 '.encode() + image.astype(np.uint8).tobytes()
+    return tk.PhotoImage(width=width, height=height, data=data, format='PPM')
+
+
+def amp_to_photo_image(image):
+    image = 255 * normalize(image)
+    height, width = image.shape
+    data = f'P5 {width} {height} 255 '.encode() + image.astype(np.uint8).tobytes()
+    return tk.PhotoImage(width=width, height=height, data=data, format='PPM')
 
 
 def add_phase_wheel(ax, corner, size):
@@ -128,6 +173,4 @@ def save_gif(images):
 
 
 if __name__ == "__main__":
-    yy, xx = np.meshgrid(np.linspace(-2, 2, 100), np.linspace(-2, 2, 100))
-    plt.imshow(screw_uz(xx, yy), origin='lower', cmap='hsv')
-    plt.show()
+    pass
