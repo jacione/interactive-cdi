@@ -5,6 +5,7 @@ from abc import ABC
 
 import numpy as np
 import skimage.draw as draw
+from matplotlib import pyplot as plt
 
 import src.utils as ut
 
@@ -44,11 +45,11 @@ class RandomShapes(Sample):
         mask_x, mask_y = draw.rectangle(start, end)
         mask[mask_x, mask_y] = 1
         # Generate shapes based on defined parameters
-        shapes, _ = draw.random_shapes(image_shape=(half, half), min_shapes=3, max_shapes=6, min_size=qtr / 2,
-                                       num_channels=2, intensity_range=((150, 255), (0, 255)), allow_overlap=True,
+        shapes, _ = draw.random_shapes(image_shape=(half, half), min_shapes=2, max_shapes=4, min_size=qtr / 2,
+                                       num_channels=2, intensity_range=((0, 150), (0, 255)), allow_overlap=True,
                                        random_seed=seed)
         # Convert object amplitude range --> 0 < x < 1
-        shapes = ((shapes / 255) - 1) * -1
+        shapes = 1 - (shapes / 255)
         # Convert object phase range --> -pi < x < pi
         shapes[:, :, 1] = 2 * np.pi * shapes[:, :, 1] - np.pi
         # Combine amplitude and phase to get complex values
@@ -61,3 +62,11 @@ class RandomShapes(Sample):
         original_object[mask_x, mask_y] = shapes
 
         self.image = original_object
+
+        plt.subplot(121, xticks=[], yticks=[], title="Amplitude")
+        plt.imshow(np.abs(self.image), cmap="gray")
+        plt.subplot(122, xticks=[], yticks=[], title="Phase")
+        plt.imshow(np.angle(self.image), cmap="hsv", interpolation_stage="rgba")
+        plt.tight_layout()
+        plt.show(block=False)
+        plt.draw()

@@ -12,16 +12,15 @@ import src.sample as sample
 
 
 class Solver:
-    def __init__(self, size=256, seed=None):
+    def __init__(self, diffraction=None, seed=None):
+        if diffraction is None:
+            self.diffraction = sample.RandomShapes(400, seed).detect()
+        else:
+            self.diffraction = np.array(diffraction)
+        self.imsize = self.diffraction.shape[0]
+        self.support = support.Support2D(self.imsize)
 
-        self.imsize = size
-
-        self.support = support.Support2D(size)
-
-        self.sample = sample.RandomShapes(size, seed)
-        self.diffraction = self.sample.detect()
-
-        self.fs_image = self.diffraction * np.exp(2j * np.pi * np.random.random((size, size)))
+        self.fs_image = self.diffraction * np.exp(2j * np.pi * np.random.random((self.imsize, self.imsize)))
         self.ds_image = ut.ifft(self.fs_image)
         self.ds_prev = np.copy(self.ds_image)
 
@@ -62,11 +61,12 @@ class Solver:
 
     def gaussian_blur(self, sigma=2.0):
         self.ds_image = ut.normalize(gaussian_filter(np.abs(self.ds_image), sigma)) * \
-                        np.exp(1j * np.angle(self.ds_image))
+                        np.exp(1j * gaussian_filter(np.angle(self.ds_image), sigma))
 
     def remove_twin(self):
         row, col = np.meshgrid(np.arange(self.imsize), np.arange(self.imsize))
-        self.ds_image[row > col] *= 0
+        self.ds_image[row > self.imsize/2] *= 0
+        self.ds_image[col > self.imsize/2] *= 0
 
     def reset(self):
         self.support = support.Support2D(self.imsize)

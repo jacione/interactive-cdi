@@ -1,22 +1,41 @@
 import time
 import tkinter as tk
 from tkinter.messagebox import showerror
+from tkinter.simpledialog import askinteger
+from tkinter.filedialog import askopenfilename, asksaveasfilename
 import tkinter.ttk as ttk
 
 import numpy as np
+from matplotlib.pyplot import imread, imsave
 
 import src.phasing as phasing
+import src.sample as sample
 import src.utils as ut
 
 
 class App:
-    def __init__(self, imsize=200):
+    def __init__(self):
         self.root = tk.Tk()
         self.root.title("Phase retrieval stepper")
 
+        menubar = tk.Menu(self.root)
+        self.root.config(menu=menubar)
+
+        file_menu = tk.Menu(menubar, tearoff=False)
+
+        new_menu = tk.Menu(file_menu, tearoff=False)
+        new_menu.add_command(label="Simulated...", command=self.new_simulated)
+        new_menu.add_command(label="Measured...", command=self.new_from_data)
+        file_menu.add_cascade(label="New dataset", menu=new_menu)
+        file_menu.add_command(label="Save result", command=self.save_result)
+        file_menu.add_separator()
+        file_menu.add_command(label="Exit", command=self.root.destroy)
+
+        menubar.add_cascade(label="File", menu=file_menu)
+
         impad = 2
 
-        self.solver = phasing.Solver(size=imsize)
+        self.solver = phasing.Solver()
         self.fourier = True
         self.img_left = ut.amp_to_photo_image(np.sqrt(np.abs(self.solver.fs_image)))
         self.img_right = ut.phase_to_photo_image(np.angle(self.solver.fs_image))
@@ -164,7 +183,7 @@ class App:
         self.update_images()
 
     def do_sw(self):
-        if (0 < self.sw_sigma_var.get() < 20) and (0 < self.sw_thresh_var.get() < 1):
+        if (0 <= self.sw_sigma_var.get() <= 20) and (0 < self.sw_thresh_var.get() < 1):
             self.solver.shrinkwrap(self.sw_sigma_var.get(), self.sw_thresh_var.get())
             self.img_left = ut.amp_to_photo_image(np.uint8(self.solver.support.array))
             self.disp_left.configure(image=self.img_left)
@@ -245,11 +264,24 @@ class App:
         self.solver.gaussian_blur()
         self.update_images()
 
+    def new_simulated(self):
+        seed = askinteger("New simulated object", "Random seed:")
+        self.solver.diffraction = sample.RandomShapes(self.solver.imsize, seed).detect()
+        self.restart()
+
+    def new_from_data(self):
+        f = askopenfilename()
+        print(f)
+        self.solver.diffraction = imread(f)
+        self.restart()
+
+    def save_result(self):
+        imsave(asksaveasfilename(defaultextension="png"), np.abs(self.solver.ds_image))
+
     def restart(self):
         self.solver.reset()
         self.update_images()
-        pass
 
 
 if __name__ == "__main__":
-    App(400)
+    App()
