@@ -4,6 +4,7 @@ from tkinter.messagebox import showerror
 from tkinter.simpledialog import askinteger
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 import tkinter.ttk as ttk
+from random import randint
 
 import numpy as np
 from matplotlib.pyplot import imread, imsave
@@ -15,28 +16,154 @@ import src.utils as ut
 
 class App:
     def __init__(self):
+        # GUI starts here
         self.root = tk.Tk()
         self.root.title("Phase retrieval stepper")
 
         menubar = tk.Menu(self.root)
         self.root.config(menu=menubar)
 
-        file_menu = tk.Menu(menubar, tearoff=False)
+        control_panel = ttk.Notebook(self.root)
+        control_panel.grid(row=1, column=1, sticky=tk.NSEW)
 
-        new_menu = tk.Menu(file_menu, tearoff=False)
-        new_menu.add_command(label="Simulated...", command=self.new_simulated)
-        new_menu.add_command(label="Measured...", command=self.new_from_data)
-        file_menu.add_cascade(label="New dataset", menu=new_menu)
-        file_menu.add_command(label="Save result", command=self.save_result)
-        file_menu.add_separator()
-        file_menu.add_command(label="Exit", command=self.root.destroy)
+        btn_kwargs = {"sticky": tk.EW, "padx": 2, "pady": 2}
+        sep_kwargs = {"column": 0, "columnspan": 3, "sticky": tk.EW, "pady": 3}
 
-        menubar.add_cascade(label="File", menu=file_menu)
+        # Automatic controls ##########################################################################################
+        auto_tab = ttk.Frame(control_panel)
+        auto_tab.grid(row=0, column=0, sticky=tk.EW)
 
+        # Create automatic control widgets
+        auto_hio_button = ttk.Button(auto_tab, text="HIO", command=self.run_hio)
+        auto_hio_button.grid(row=0, column=0, **btn_kwargs)
+        ttk.Label(auto_tab, text="x").grid(row=0, column=1, **btn_kwargs)
+        self.num_hio = tk.IntVar(value=85)
+        num_hio_input = ttk.Entry(auto_tab, textvariable=self.num_hio, width=5)
+        num_hio_input.grid(row=0, column=2, **btn_kwargs)
+
+        auto_er_button = ttk.Button(auto_tab, text="ER", command=self.run_er)
+        auto_er_button.grid(row=1, column=0, **btn_kwargs)
+        self.num_er = tk.IntVar(value=15)
+        ttk.Label(auto_tab, text="x").grid(row=1, column=1, **btn_kwargs)
+        num_er_input = ttk.Entry(auto_tab, textvariable=self.num_er, width=5)
+        num_er_input.grid(row=1, column=2, **btn_kwargs)
+
+        self.progbar = ttk.Progressbar(auto_tab, orient='horizontal', mode="determinate")
+        self.progbar.grid(row=2, column=0, columnspan=3, **btn_kwargs)
+
+        auto_sw_button = ttk.Button(auto_tab, text="Shrinkwrap", command=self.do_sw)
+        auto_sw_button.grid(row=3, column=0, columnspan=3, **btn_kwargs)
+
+        auto_twin_button = ttk.Button(auto_tab, text="Remove twin", command=self.remove_twin)
+        auto_twin_button.grid(row=4, column=0, columnspan=3, **btn_kwargs)
+
+        auto_blur_button = ttk.Button(auto_tab, text="Blur", command=self.gaussian_blur)
+        auto_blur_button.grid(row=5, column=0, columnspan=3, **btn_kwargs)
+
+        auto_reset_button = ttk.Button(auto_tab, text="Reset", command=self.restart)
+        auto_reset_button.grid(row=6, column=0, columnspan=3, **btn_kwargs)
+
+        self.auto_buttons = [auto_er_button, auto_hio_button, auto_sw_button, auto_twin_button, auto_blur_button,
+                             auto_reset_button]
+
+        # Manual controls #############################################################################################
+        manual_tab = ttk.Frame(control_panel)
+        manual_tab.grid(row=0, column=0, sticky=tk.EW)
+
+        # Create manual control widgets
+        sw_button = ttk.Button(manual_tab, text="Shrinkwrap", command=self.do_sw)
+        sw_button.grid(row=0, column=0, **btn_kwargs)
+
+        hio_button = ttk.Button(manual_tab, text="HIO constraint", command=self.do_hio)
+        hio_button.grid(row=1, column=0,  **btn_kwargs)
+
+        er_button = ttk.Button(manual_tab, text="ER constraint", command=self.do_er)
+        er_button.grid(row=2, column=0, **btn_kwargs)
+
+        fft_button = ttk.Button(manual_tab, text="FFT", command=self.to_fourier)
+        fft_button.grid(row=3, column=0, **btn_kwargs)
+
+        ttk.Separator(manual_tab, orient="horizontal").grid(row=4, **sep_kwargs)
+
+        ifft_button = ttk.Button(manual_tab, text="IFFT", command=self.to_direct)
+        ifft_button.grid(row=5, column=0, **btn_kwargs)
+
+        modulus_button = ttk.Button(manual_tab, text="Modulus constraint", command=self.do_modulus)
+        modulus_button.grid(row=6, column=0, **btn_kwargs)
+
+        # Group buttons
+        self.ds_buttons = [er_button, sw_button, fft_button, hio_button]
+        self.fs_buttons = [ifft_button, modulus_button]
+
+        # Data controls ###############################################################################################
+        data_tab = ttk.Frame(control_panel)
+        data_tab.grid(row=0, column=0, stick=tk.EW)
+
+        ttk.Label(data_tab, text="Seed (int): ").grid(row=1, column=0, sticky=tk.E)
+        self.sim_seed = tk.IntVar(value=randint(0, 9999999))
+        ttk.Entry(data_tab, textvariable=self.sim_seed, width=10).grid(row=1, column=1, **btn_kwargs)
+
+        ttk.Label(data_tab, text="Camera: ").grid(row=2, column=0, sticky=tk.E)
+        self.sim_bits = tk.StringVar(value="N/A")
+        self.bits_dict = {"Ideal": None} | {f"{b}-bit": (2**b) - 1 for b in [8, 10, 12, 14, 16, 24]}
+        ttk.OptionMenu(data_tab, self.sim_bits, "Ideal", *self.bits_dict.keys()).grid(row=2, column=1, **btn_kwargs)
+
+        ttk.Label(data_tab, text="Saturation: ").grid(row=3, column=0, sticky=tk.E)
+        self.sim_sat = tk.StringVar(data_tab, value="0%")
+        self.sat_dict = {f"{p}%": 1 + (p / 100) for p in [-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50]}
+        ttk.OptionMenu(data_tab, self.sim_sat, "0%", *self.sat_dict.keys()).grid(row=3, column=1, **btn_kwargs)
+
+        ttk.Button(data_tab, text="Generate data", command=self.generate).grid(row=4, column=0, columnspan=2,
+                                                                               **btn_kwargs)
+        ttk.Button(data_tab, text="Show", command=self.show_sample).grid(row=5, column=0, columnspan=2, **btn_kwargs)
+
+        ttk.Separator(data_tab, orient="horizontal").grid(row=6, **sep_kwargs)
+        ttk.Button(data_tab, text="Load diffraction", command=self.load_data).grid(row=7, column=0, columnspan=2,
+                                                                                   **btn_kwargs)
+        ttk.Separator(data_tab, orient="horizontal").grid(row=8, **sep_kwargs)
+        ttk.Button(data_tab, text="Save result", command=self.save_result).grid(row=9, column=0, columnspan=2,
+                                                                                **btn_kwargs)
+
+        # Add the tabs to the control panel
+        control_panel.add(auto_tab, text="Auto")
+        control_panel.add(manual_tab, text="Manual")
+        control_panel.add(data_tab, text="Data")
+
+        # Parameter controls ##########################################################################################
+        params = ttk.LabelFrame(self.root, text="Parameters", borderwidth=2)
+        params.grid(row=2, column=1, sticky=tk.S)
+
+        ttk.Label(params, text="Shrinkwrap", justify=tk.CENTER).grid(row=0, column=0, columnspan=2)
+
+        ttk.Label(params, text="Sigma:", justify=tk.RIGHT).grid(row=1, column=0, sticky=tk.E)
+        self.sw_sigma = tk.DoubleVar(value=2.0)
+        sw_sigma_input = ttk.Entry(params, textvariable=self.sw_sigma, width=6)
+        sw_sigma_input.grid(row=1, column=1, **btn_kwargs)
+
+        ttk.Label(params, text="Threshold:", justify=tk.RIGHT).grid(row=2, column=0, sticky=tk.E)
+        self.sw_thresh = tk.DoubleVar(value=0.1)
+        sw_thresh_input = ttk.Entry(params, textvariable=self.sw_thresh, width=6)
+        sw_thresh_input.grid(row=2, column=1, **btn_kwargs)
+
+        ttk.Separator(params, orient="horizontal").grid(row=3, **sep_kwargs)
+
+        ttk.Label(params, text="HIO", justify=tk.CENTER).grid(row=4, column=0, columnspan=2)
+
+        ttk.Label(params, text="Beta:", justify=tk.RIGHT).grid(row=5, column=0, sticky=tk.E)
+        self.hio_beta = tk.DoubleVar(value=0.9)
+        hio_beta_input = ttk.Entry(params, textvariable=self.hio_beta, width=6)
+        hio_beta_input.grid(row=5, column=1, **btn_kwargs)
+
+        ttk.Separator(params, orient="horizontal").grid(row=6, **sep_kwargs)
+
+        # Finally, make the object itself. Start with random shapes.
         impad = 2
-
-        self.solver = phasing.Solver()
+        self.simulated = True
         self.fourier = True
+        self.sim_size = 400
+        self.sample = sample.RandomShapes(self.sim_size, self.sim_seed.get())
+        self.solver = phasing.Solver(self.sample.detect())
+
         self.img_left = ut.amp_to_photo_image(np.sqrt(np.abs(self.solver.fs_image)))
         self.img_right = ut.phase_to_photo_image(np.angle(self.solver.fs_image))
 
@@ -50,116 +177,13 @@ class App:
         self.disp_right = ttk.Label(self.root, image=self.img_right)
         self.disp_right.grid(row=1, column=2, rowspan=2, padx=impad, pady=impad)
 
-        self.controls = ttk.Notebook(self.root)
-        self.controls.grid(row=1, column=1, sticky=tk.NSEW)
-
-        btn_kwargs = {"sticky": tk.EW, "padx": 2, "pady": 2}
-        sep_kwargs = {"column": 0, "columnspan": 3, "sticky": tk.EW, "pady": 3}
-
-        # Manual controls #############################################################################################
-        self.manual = ttk.Frame(self.controls)
-        self.manual.grid(row=0, column=0, sticky=tk.EW)
-
-        # Create manual control widgets
-        self.sw_button = ttk.Button(self.manual, text="Shrinkwrap", command=self.do_sw)
-        self.sw_button.grid(row=0, column=0, **btn_kwargs)
-
-        self.hio_button = ttk.Button(self.manual, text="HIO constraint", command=self.do_hio)
-        self.hio_button.grid(row=1, column=0,  **btn_kwargs)
-
-        self.er_button = ttk.Button(self.manual, text="ER constraint", command=self.do_er)
-        self.er_button.grid(row=2, column=0, **btn_kwargs)
-
-        self.fft_button = ttk.Button(self.manual, text="FFT", command=self.to_fourier)
-        self.fft_button.grid(row=3, column=0, **btn_kwargs)
-
-        ttk.Separator(self.manual, orient="horizontal").grid(row=4, **sep_kwargs)
-
-        self.ifft_button = ttk.Button(self.manual, text="IFFT", command=self.to_direct)
-        self.ifft_button.grid(row=5, column=0, **btn_kwargs)
-
-        self.modulus_button = ttk.Button(self.manual, text="Mod constraint", command=self.do_modulus)
-        self.modulus_button.grid(row=6, column=0, **btn_kwargs)
-
-        # Group buttons
-        self.ds_buttons = [self.er_button, self.sw_button, self.fft_button, self.hio_button]
-        self.fs_buttons = [self.ifft_button, self.modulus_button]
-
-        # Automatic controls ##########################################################################################
-        self.auto = ttk.Frame(self.controls)
-        self.auto.grid(row=0, column=0, sticky=tk.EW)
-
-        # Create automatic control widgets
-        self.auto_hio_button = ttk.Button(self.auto, text="HIO", command=self.run_hio)
-        self.auto_hio_button.grid(row=0, column=0, **btn_kwargs)
-        ttk.Label(self.auto, text="x").grid(row=0, column=1, **btn_kwargs)
-        self.num_hio = tk.IntVar(value=50)
-        self.num_hio_input = ttk.Entry(self.auto, textvariable=self.num_hio, width=5)
-        self.num_hio_input.grid(row=0, column=2, **btn_kwargs)
-
-        self.auto_er_button = ttk.Button(self.auto, text="ER", command=self.run_er)
-        self.auto_er_button.grid(row=1, column=0, **btn_kwargs)
-        self.num_er = tk.IntVar(value=5)
-        ttk.Label(self.auto, text="x").grid(row=1, column=1, **btn_kwargs)
-        self.num_er_input = ttk.Entry(self.auto, textvariable=self.num_er, width=5)
-        self.num_er_input.grid(row=1, column=2, **btn_kwargs)
-
-        self.progbar = ttk.Progressbar(self.auto, orient='horizontal', mode="determinate")
-        self.progbar.grid(row=2, column=0, columnspan=3, **btn_kwargs)
-
-        self.auto_sw_button = ttk.Button(self.auto, text="Shrinkwrap", command=self.do_sw)
-        self.auto_sw_button.grid(row=3, column=0, columnspan=3, **btn_kwargs)
-
-        self.auto_twin_button = ttk.Button(self.auto, text="Remove twin", command=self.remove_twin)
-        self.auto_twin_button.grid(row=4, column=0, columnspan=3, **btn_kwargs)
-
-        self.auto_blur_button = ttk.Button(self.auto, text="Blur", command=self.gaussian_blur)
-        self.auto_blur_button.grid(row=5, column=0, columnspan=3, **btn_kwargs)
-
-        self.auto_reset_button = ttk.Button(self.auto, text="Reset", command=self.restart)
-        self.auto_reset_button.grid(row=6, column=0, columnspan=3, **btn_kwargs)
-
-        self.auto_buttons = [self.auto_er_button, self.auto_hio_button, self.auto_sw_button, self.auto_twin_button,
-                             self.auto_blur_button, self.auto_reset_button]
-
-        self.controls.add(self.auto, text="Auto")
-        self.controls.add(self.manual, text="Manual")
-
-        # Parameter controls ##########################################################################################
-        self.params = ttk.LabelFrame(self.root, text="Parameters", borderwidth=2)
-        self.params.grid(row=2, column=1, sticky=tk.S)
-
-        ttk.Label(self.params, text="Shrinkwrap", justify=tk.CENTER).grid(row=0, column=0, columnspan=2)
-
-        ttk.Label(self.params, text="Sigma:", justify=tk.RIGHT).grid(row=1, column=0, sticky=tk.E)
-        self.sw_sigma_var = tk.DoubleVar(value=2.0)
-        self.sw_sigma_input = ttk.Entry(self.params, textvariable=self.sw_sigma_var, width=6)
-        self.sw_sigma_input.grid(row=1, column=1, **btn_kwargs)
-
-        ttk.Label(self.params, text="Threshold:", justify=tk.RIGHT).grid(row=2, column=0, sticky=tk.E)
-        self.sw_thresh_var = tk.DoubleVar(value=0.1)
-        self.sw_thresh_input = ttk.Entry(self.params, textvariable=self.sw_thresh_var, width=6)
-        self.sw_thresh_input.grid(row=2, column=1, **btn_kwargs)
-
-        ttk.Separator(self.params, orient="horizontal").grid(row=3, **sep_kwargs)
-
-        ttk.Label(self.params, text="HIO", justify=tk.CENTER).grid(row=4, column=0, columnspan=2)
-
-        ttk.Label(self.params, text="Beta:", justify=tk.RIGHT).grid(row=5, column=0, sticky=tk.E)
-        self.hio_beta_var = tk.DoubleVar(value=0.9)
-        self.hio_beta_input = ttk.Entry(self.params, textvariable=self.hio_beta_var, width=6)
-        self.hio_beta_input.grid(row=5, column=1, **btn_kwargs)
-
-        ttk.Separator(self.params, orient="horizontal").grid(row=6, **sep_kwargs)
-
+        self.to_fourier()
         self.clock = time.perf_counter()
-
-        self.to_direct()
         self.root.mainloop()
 
     def update_images(self):
         if self.fourier:
-            self.img_left = ut.amp_to_photo_image(np.log(np.abs(self.solver.fs_image) + 1))
+            self.img_left = ut.amp_to_photo_image(np.sqrt(np.abs(self.solver.fs_image)))
             self.img_right = ut.phase_to_photo_image(np.angle(self.solver.fs_image))
         else:
             self.img_left = ut.amp_to_photo_image(np.abs(self.solver.ds_image))
@@ -175,16 +199,16 @@ class App:
         pass
 
     def do_hio(self):
-        if 0 < self.hio_beta_var.get() < 1:
-            self.solver.hio_constraint(self.hio_beta_var.get())
+        if 0 < self.hio_beta.get() < 1:
+            self.solver.hio_constraint(self.hio_beta.get())
         else:
             showerror("Error", "HIO failed one or more checks:\n0 < beta < 1")
             return -1
         self.update_images()
 
     def do_sw(self):
-        if (0 <= self.sw_sigma_var.get() <= 20) and (0 < self.sw_thresh_var.get() < 1):
-            self.solver.shrinkwrap(self.sw_sigma_var.get(), self.sw_thresh_var.get())
+        if (0 <= self.sw_sigma.get() <= 20) and (0 < self.sw_thresh.get() < 1):
+            self.solver.shrinkwrap(self.sw_sigma.get(), self.sw_thresh.get())
             self.img_left = ut.amp_to_photo_image(np.uint8(self.solver.support.array))
             self.disp_left.configure(image=self.img_left)
             self.disp_left.image = self.img_left
@@ -199,9 +223,9 @@ class App:
 
     def to_fourier(self):
         self.fourier = True
-        for button in [self.er_button, self.sw_button, self.fft_button, self.hio_button]:
+        for button in self.ds_buttons:
             button.state(["disabled"])
-        for button in [self.ifft_button, self.modulus_button]:
+        for button in self.fs_buttons:
             button.state(["!disabled"])
         self.solver.fft()
         self.update_images()
@@ -209,9 +233,9 @@ class App:
 
     def to_direct(self):
         self.fourier = False
-        for button in [self.er_button, self.sw_button, self.fft_button, self.hio_button]:
+        for button in self.ds_buttons:
             button.state(["!disabled"])
-        for button in [self.ifft_button, self.modulus_button]:
+        for button in self.fs_buttons:
             button.state(["disabled"])
         self.solver.ifft()
         self.update_images()
@@ -249,12 +273,12 @@ class App:
     def run_hio(self):
         if self.fourier:
             self.to_direct()
-        if not (0 < self.hio_beta_var.get() < 1):
+        if not (0 < self.hio_beta.get() < 1):
             showerror("Error", "HIO failed one or more checks:\n0 < beta < 1")
             return
         for button in self.auto_buttons + self.ds_buttons + self.fs_buttons:
             button.state(["disabled"])
-        self.iterate_hio(self.hio_beta_var.get(), self.num_hio.get())
+        self.iterate_hio(self.hio_beta.get(), self.num_hio.get())
 
     def remove_twin(self):
         self.solver.remove_twin()
@@ -264,14 +288,23 @@ class App:
         self.solver.gaussian_blur()
         self.update_images()
 
-    def new_simulated(self):
-        seed = askinteger("New simulated object", "Random seed:")
-        self.solver.diffraction = sample.RandomShapes(self.solver.imsize, seed).detect()
+    def generate(self):
+        self.simulated = True
+        self.sample = sample.RandomShapes(self.sim_size, self.sim_seed.get())
+        self.solver.diffraction = self.sample.detect(self.sat_dict[self.sim_sat.get()],
+                                                     self.bits_dict[self.sim_bits.get()])
+        self.to_fourier()
         self.restart()
 
-    def new_from_data(self):
+    def show_sample(self):
+        if self.simulated:
+            self.sample.show()
+        else:
+            showerror("Error", "Ground truth knowledge only exists for simulated data.")
+
+    def load_data(self):
+        self.simulated = False
         f = askopenfilename()
-        print(f)
         self.solver.diffraction = imread(f)
         self.restart()
 

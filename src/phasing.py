@@ -8,15 +8,11 @@ from scipy.ndimage import gaussian_filter
 
 import src.utils as ut
 import src.support as support
-import src.sample as sample
 
 
 class Solver:
-    def __init__(self, diffraction=None, seed=None):
-        if diffraction is None:
-            self.diffraction = sample.RandomShapes(400, seed).detect()
-        else:
-            self.diffraction = np.array(diffraction)
+    def __init__(self, diffraction):
+        self.diffraction = np.array(diffraction)
         self.imsize = self.diffraction.shape[0]
         self.support = support.Support2D(self.imsize)
 

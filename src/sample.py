@@ -1,7 +1,7 @@
 """
 Classes of simulated objects to perform phase retrieval
 """
-from abc import ABC
+from abc import ABC, abstractmethod
 
 import numpy as np
 import skimage.draw as draw
@@ -23,15 +23,30 @@ class Sample(ABC):
     def diffract(self):
         return np.abs(ut.fft(self.image))**2
 
-    def detect(self, saturation=1.0, bit_depth=None):
+    def detect(self, saturation=1.0, max_val=None):
         img = self.diffract()
-        if bit_depth is not None:
-            img = (2**bit_depth - 1) * ut.normalize(img)
+        if max_val is not None:
+            img = max_val * ut.normalize(img)
             img = RNG.poisson(img)
-        img = np.clip(img, 0, saturation*np.max(img))
-        if bit_depth is not None:
-            img = np.fix((2**bit_depth - 1) * ut.normalize(img))
+        img = np.clip(saturation*img, 0, np.max(img))
+        if max_val is not None:
+            img = np.fix(max_val * ut.normalize(img))
         return np.sqrt(img)
+
+    @abstractmethod
+    def show(self):
+        pass
+
+
+class MeasuredData(Sample):
+    def __init__(self):
+        super().__init__()
+
+    def show(self):
+        plt.figure()
+        plt.title("Ummm...")
+        plt.show(block=False)
+        plt.draw()
 
 
 class RandomShapes(Sample):
@@ -63,10 +78,11 @@ class RandomShapes(Sample):
 
         self.image = original_object
 
+    def show(self):
         plt.subplot(121, xticks=[], yticks=[], title="Amplitude")
         plt.imshow(np.abs(self.image), cmap="gray")
         plt.subplot(122, xticks=[], yticks=[], title="Phase")
-        plt.imshow(np.angle(self.image), cmap="hsv", interpolation_stage="rgba")
+        plt.imshow(np.angle(self.image), cmap="hsv", interpolation_stage="rgba", vmin=-np.pi, vmax=np.pi)
         plt.tight_layout()
         plt.show(block=False)
         plt.draw()
