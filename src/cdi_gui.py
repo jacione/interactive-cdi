@@ -32,38 +32,45 @@ class App:
         auto_tab = ttk.Frame(control_panel)
         auto_tab.grid(row=0, column=0, sticky=tk.EW)
 
+        auto_hiosw_button = ttk.Button(auto_tab, text="HIO + SW", command=self.run_hiosw)
+        auto_hiosw_button.grid(row=0, column=0, **btn_kwargs)
+        ttk.Label(auto_tab, text="x").grid(row=0, column=1, **btn_kwargs)
+        self.num_hiosw = tk.IntVar(value=500)
+        num_hiosw_input = ttk.Entry(auto_tab, textvariable=self.num_hiosw, width=5)
+        num_hiosw_input.grid(row=0, column=2, **btn_kwargs)
+
         # Create automatic control widgets
         auto_hio_button = ttk.Button(auto_tab, text="HIO", command=self.run_hio)
-        auto_hio_button.grid(row=0, column=0, **btn_kwargs)
-        ttk.Label(auto_tab, text="x").grid(row=0, column=1, **btn_kwargs)
+        auto_hio_button.grid(row=1, column=0, **btn_kwargs)
+        ttk.Label(auto_tab, text="x").grid(row=1, column=1, **btn_kwargs)
         self.num_hio = tk.IntVar(value=85)
         num_hio_input = ttk.Entry(auto_tab, textvariable=self.num_hio, width=5)
-        num_hio_input.grid(row=0, column=2, **btn_kwargs)
+        num_hio_input.grid(row=1, column=2, **btn_kwargs)
 
         auto_er_button = ttk.Button(auto_tab, text="ER", command=self.run_er)
-        auto_er_button.grid(row=1, column=0, **btn_kwargs)
+        auto_er_button.grid(row=2, column=0, **btn_kwargs)
         self.num_er = tk.IntVar(value=15)
-        ttk.Label(auto_tab, text="x").grid(row=1, column=1, **btn_kwargs)
+        ttk.Label(auto_tab, text="x").grid(row=2, column=1, **btn_kwargs)
         num_er_input = ttk.Entry(auto_tab, textvariable=self.num_er, width=5)
-        num_er_input.grid(row=1, column=2, **btn_kwargs)
+        num_er_input.grid(row=2, column=2, **btn_kwargs)
 
         self.progbar = ttk.Progressbar(auto_tab, orient='horizontal', mode="determinate")
-        self.progbar.grid(row=2, column=0, columnspan=3, **btn_kwargs)
+        self.progbar.grid(row=3, column=0, columnspan=3, **btn_kwargs)
 
         auto_sw_button = ttk.Button(auto_tab, text="Shrinkwrap", command=self.do_sw)
-        auto_sw_button.grid(row=3, column=0, columnspan=3, **btn_kwargs)
+        auto_sw_button.grid(row=4, column=0, columnspan=3, **btn_kwargs)
 
         auto_twin_button = ttk.Button(auto_tab, text="Remove twin", command=self.remove_twin)
-        auto_twin_button.grid(row=4, column=0, columnspan=3, **btn_kwargs)
+        auto_twin_button.grid(row=5, column=0, columnspan=3, **btn_kwargs)
 
         auto_blur_button = ttk.Button(auto_tab, text="Blur", command=self.gaussian_blur)
-        auto_blur_button.grid(row=5, column=0, columnspan=3, **btn_kwargs)
+        auto_blur_button.grid(row=6, column=0, columnspan=3, **btn_kwargs)
 
         auto_reset_button = ttk.Button(auto_tab, text="Reset", command=self.restart)
-        auto_reset_button.grid(row=6, column=0, columnspan=3, **btn_kwargs)
+        auto_reset_button.grid(row=7, column=0, columnspan=3, **btn_kwargs)
 
-        self.auto_buttons = [auto_er_button, auto_hio_button, auto_sw_button, auto_twin_button, auto_blur_button,
-                             auto_reset_button]
+        self.auto_buttons = [auto_er_button, auto_hio_button, auto_hiosw_button, auto_sw_button, auto_twin_button,
+                             auto_blur_button, auto_reset_button]
 
         # Manual controls #############################################################################################
         manual_tab = ttk.Frame(control_panel)
@@ -133,31 +140,31 @@ class App:
         control_panel.add(manual_tab, text="Manual")
 
         # Parameter controls ##########################################################################################
-        params = ttk.LabelFrame(self.root, text="Parameters", borderwidth=2)
+        # params = ttk.LabelFrame(self.root, text="Parameters", borderwidth=2)
+        params = ttk.Frame(self.root, borderwidth=2)
         params.grid(row=2, column=1, sticky=tk.S)
 
         ttk.Label(params, text="Shrinkwrap", justify=tk.CENTER).grid(row=0, column=0, columnspan=2)
+        ttk.Separator(params, orient="vertical").grid(row=0, column=2, rowspan=3, sticky=tk.NS, padx=8)
+        ttk.Label(params, text="HIO", justify=tk.CENTER).grid(row=0, column=3)
 
-        ttk.Label(params, text="Sigma:", justify=tk.RIGHT).grid(row=1, column=0, sticky=tk.E)
+        ttk.Label(params, text="Sigma", justify=tk.CENTER).grid(row=1, column=0)
         self.sw_sigma = tk.DoubleVar(value=2.0)
-        sw_sigma_input = ttk.Entry(params, textvariable=self.sw_sigma, width=6)
-        sw_sigma_input.grid(row=1, column=1, **btn_kwargs)
+        sw_sigma_input = ttk.Scale(params, from_=10.0, to=0.0, orient="vertical", variable=self.sw_sigma)
+        sw_sigma_input.grid(row=2, column=0, **btn_kwargs)
+        FormatLabel(params, textvariable=self.sw_sigma, format="{:.2f}").grid(row=3, column=0)
 
-        ttk.Label(params, text="Threshold:", justify=tk.RIGHT).grid(row=2, column=0, sticky=tk.E)
+        ttk.Label(params, text="Thresh.", justify=tk.CENTER).grid(row=1, column=1)
         self.sw_thresh = tk.DoubleVar(value=0.1)
-        sw_thresh_input = ttk.Entry(params, textvariable=self.sw_thresh, width=6)
+        sw_thresh_input = ttk.Scale(params, from_=0.5, to=0.0, orient="vertical", variable=self.sw_thresh)
         sw_thresh_input.grid(row=2, column=1, **btn_kwargs)
+        FormatLabel(params, textvariable=self.sw_thresh, format="{:.2f}").grid(row=3, column=1)
 
-        ttk.Separator(params, orient="horizontal").grid(row=3, **sep_kwargs)
-
-        ttk.Label(params, text="HIO", justify=tk.CENTER).grid(row=4, column=0, columnspan=2)
-
-        ttk.Label(params, text="Beta:", justify=tk.RIGHT).grid(row=5, column=0, sticky=tk.E)
+        ttk.Label(params, text="Beta", justify=tk.RIGHT).grid(row=1, column=3)
         self.hio_beta = tk.DoubleVar(value=0.9)
-        hio_beta_input = ttk.Entry(params, textvariable=self.hio_beta, width=6)
-        hio_beta_input.grid(row=5, column=1, **btn_kwargs)
-
-        ttk.Separator(params, orient="horizontal").grid(row=6, **sep_kwargs)
+        hio_beta_input = ttk.Scale(params, from_=1.0, to=0.0, orient="vertical", variable=self.hio_beta)
+        hio_beta_input.grid(row=2, column=3, **btn_kwargs)
+        FormatLabel(params, textvariable=self.hio_beta, format="{:.2f}").grid(row=3, column=3)
 
         # Finally, make the object itself. Start with random shapes.
         impad = 2
@@ -281,7 +288,32 @@ class App:
             return
         for button in self.auto_buttons + self.ds_buttons + self.fs_buttons:
             button.state(["disabled"])
-        self.iterate_hio(self.hio_beta.get(), self.num_hio.get())
+        self.iterate_hio(self.num_hio.get())
+
+    def iterate_hiosw(self, i):
+        self.solver.hio_iteration(self.hio_beta.get())
+        self.solver.shrinkwrap(self.sw_sigma.get(), self.sw_thresh.get())
+        self.update_images()
+        self.progbar["value"] = 100*(1 - i/self.num_hiosw.get())
+        if i > 0:
+            self.root.after(10, self.iterate_hiosw, i-1)
+        else:
+            for button in self.auto_buttons + self.ds_buttons:
+                button.state(["!disabled"])
+            self.progbar["value"] = 0
+
+    def run_hiosw(self):
+        if self.fourier:
+            self.to_direct()
+        if not (0 < self.hio_beta.get() < 1):
+            showerror("Error", "HIO failed one or more checks:\n0 < beta < 1")
+            return
+        if not ((0 <= self.sw_sigma.get() <= 20) and (0 < self.sw_thresh.get() < 1)):
+            showerror("Error", "Shrinkwrap failed one or more checks:\n0 < sigma < 20\n0 < threshold < 1")
+            return
+        for button in self.auto_buttons + self.ds_buttons + self.fs_buttons:
+            button.state(["disabled"])
+        self.iterate_hiosw(self.num_hiosw.get())
 
     def remove_twin(self):
         self.solver.remove_twin()
