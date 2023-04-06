@@ -50,7 +50,7 @@ class MeasuredData(Sample):
 
 
 class RandomShapes(Sample):
-    def __init__(self, size, seed=None):
+    def __init__(self, size, seed=None, nshapes=2):
         super().__init__()
         half = size // 2
         qtr = size // 4
@@ -60,9 +60,9 @@ class RandomShapes(Sample):
         mask_x, mask_y = draw.rectangle(start, end)
         mask[mask_x, mask_y] = 1
         # Generate shapes based on defined parameters
-        shapes, _ = draw.random_shapes(image_shape=(half, half), min_shapes=2, max_shapes=4, min_size=qtr / 2,
-                                       num_channels=2, intensity_range=((0, 150), (0, 255)), allow_overlap=True,
-                                       random_seed=seed)
+        shapes, _ = draw.random_shapes(image_shape=(half, half), min_shapes=nshapes, max_shapes=nshapes,
+                                       min_size=qtr / 2, num_channels=2, intensity_range=((0, 150), (0, 255)),
+                                       allow_overlap=True, random_seed=seed)
         # Convert object amplitude range --> 0 < x < 1
         shapes = 1 - (shapes / 255)
         # Convert object phase range --> -pi < x < pi

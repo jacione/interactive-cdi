@@ -1,7 +1,6 @@
 import time
 import tkinter as tk
 from tkinter.messagebox import showerror
-from tkinter.simpledialog import askinteger
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 import tkinter.ttk as ttk
 from random import randint
@@ -103,31 +102,35 @@ class App:
         self.sim_seed = tk.IntVar(value=randint(0, 9999999))
         ttk.Entry(data_tab, textvariable=self.sim_seed, width=10).grid(row=1, column=1, **btn_kwargs)
 
-        ttk.Label(data_tab, text="Camera: ").grid(row=2, column=0, sticky=tk.E)
+        ttk.Label(data_tab, text="# of shapes: ").grid(row=2, column=0, sticky=tk.E)
+        self.sim_nshapes = tk.IntVar(value=5)
+        ttk.Entry(data_tab, textvariable=self.sim_nshapes, width=10).grid(row=2, column=1, **btn_kwargs)
+
+        ttk.Label(data_tab, text="Camera: ").grid(row=3, column=0, sticky=tk.E)
         self.sim_bits = tk.StringVar(value="N/A")
         self.bits_dict = {"Ideal": None} | {f"{b}-bit": (2**b) - 1 for b in [8, 10, 12, 14, 16, 24]}
-        ttk.OptionMenu(data_tab, self.sim_bits, "Ideal", *self.bits_dict.keys()).grid(row=2, column=1, **btn_kwargs)
+        ttk.OptionMenu(data_tab, self.sim_bits, "Ideal", *self.bits_dict.keys()).grid(row=3, column=1, **btn_kwargs)
 
-        ttk.Label(data_tab, text="Saturation: ").grid(row=3, column=0, sticky=tk.E)
+        ttk.Label(data_tab, text="Saturation: ").grid(row=4, column=0, sticky=tk.E)
         self.sim_sat = tk.StringVar(data_tab, value="0%")
         self.sat_dict = {f"{p}%": 1 + (p / 100) for p in [-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50]}
-        ttk.OptionMenu(data_tab, self.sim_sat, "0%", *self.sat_dict.keys()).grid(row=3, column=1, **btn_kwargs)
+        ttk.OptionMenu(data_tab, self.sim_sat, "0%", *self.sat_dict.keys()).grid(row=4, column=1, **btn_kwargs)
 
-        ttk.Button(data_tab, text="Generate data", command=self.generate).grid(row=4, column=0, columnspan=2,
+        ttk.Button(data_tab, text="Generate data", command=self.generate).grid(row=5, column=0, columnspan=2,
                                                                                **btn_kwargs)
-        ttk.Button(data_tab, text="Show", command=self.show_sample).grid(row=5, column=0, columnspan=2, **btn_kwargs)
+        ttk.Button(data_tab, text="Show", command=self.show_sample).grid(row=6, column=0, columnspan=2, **btn_kwargs)
 
-        ttk.Separator(data_tab, orient="horizontal").grid(row=6, **sep_kwargs)
-        ttk.Button(data_tab, text="Load diffraction", command=self.load_data).grid(row=7, column=0, columnspan=2,
+        ttk.Separator(data_tab, orient="horizontal").grid(row=7, **sep_kwargs)
+        ttk.Button(data_tab, text="Load diffraction", command=self.load_data).grid(row=8, column=0, columnspan=2,
                                                                                    **btn_kwargs)
-        ttk.Separator(data_tab, orient="horizontal").grid(row=8, **sep_kwargs)
-        ttk.Button(data_tab, text="Save result", command=self.save_result).grid(row=9, column=0, columnspan=2,
+        ttk.Separator(data_tab, orient="horizontal").grid(row=9, **sep_kwargs)
+        ttk.Button(data_tab, text="Save result", command=self.save_result).grid(row=10, column=0, columnspan=2,
                                                                                 **btn_kwargs)
 
         # Add the tabs to the control panel
+        control_panel.add(data_tab, text="Data")
         control_panel.add(auto_tab, text="Auto")
         control_panel.add(manual_tab, text="Manual")
-        control_panel.add(data_tab, text="Data")
 
         # Parameter controls ##########################################################################################
         params = ttk.LabelFrame(self.root, text="Parameters", borderwidth=2)
@@ -186,7 +189,7 @@ class App:
             self.img_left = ut.amp_to_photo_image(np.sqrt(np.abs(self.solver.fs_image)))
             self.img_right = ut.phase_to_photo_image(np.angle(self.solver.fs_image))
         else:
-            self.img_left = ut.amp_to_photo_image(np.abs(self.solver.ds_image))
+            self.img_left = ut.amp_to_photo_image(np.abs(self.solver.ds_image), mask=self.solver.support.array)
             self.img_right = ut.phase_to_photo_image(np.angle(self.solver.ds_image))
         self.disp_left.configure(image=self.img_left)
         self.disp_left.image = self.img_left
@@ -259,12 +262,12 @@ class App:
             button.state(["disabled"])
         self.iterate_er(self.num_er.get())
 
-    def iterate_hio(self, beta, i):
-        self.solver.hio_iteration(beta)
+    def iterate_hio(self, i):
+        self.solver.hio_iteration(self.hio_beta.get())
         self.update_images()
         self.progbar["value"] = 100*(1 - i/self.num_hio.get())
         if i > 0:
-            self.root.after(10, self.iterate_hio, beta, i-1)
+            self.root.after(10, self.iterate_hio, i-1)
         else:
             for button in self.auto_buttons + self.ds_buttons:
                 button.state(["!disabled"])
@@ -290,7 +293,7 @@ class App:
 
     def generate(self):
         self.simulated = True
-        self.sample = sample.RandomShapes(self.sim_size, self.sim_seed.get())
+        self.sample = sample.RandomShapes(self.sim_size, self.sim_seed.get(), self.sim_nshapes.get())
         self.solver.diffraction = self.sample.detect(self.sat_dict[self.sim_sat.get()],
                                                      self.bits_dict[self.sim_bits.get()])
         self.to_fourier()
@@ -312,8 +315,44 @@ class App:
         imsave(asksaveasfilename(defaultextension="png"), np.abs(self.solver.ds_image))
 
     def restart(self):
+        self.hio_beta.set(0.9)
+        self.sw_sigma.set(2.0)
+        self.sw_thresh.set(0.1)
         self.solver.reset()
         self.update_images()
+
+
+class FormatLabel(tk.Label):
+
+    def __init__(self, master=None, cnf=None, **kw):
+
+        # default values
+        if cnf is None:
+            cnf = {}
+        self._format = '{}'
+        self._textvariable = None
+
+        # get new format and remove it from `kw` so later `super().__init__` doesn't use them (it would get error message)
+        if 'format' in kw:
+            self._format = kw['format']
+            del kw['format']
+
+        # get `textvariable` to assign own function which set formatted text in Label when variable change value
+        if 'textvariable' in kw:
+            self._textvariable = kw['textvariable']
+            self._textvariable.trace('w', self._update_text)
+            del kw['textvariable']
+
+        # run `Label.__init__` without `format` and `textvariable`
+        super().__init__(master, cnf={}, **kw)
+
+        # update text after running `Label.__init__`
+        if self._textvariable:
+            self._update_text(self._textvariable, '', 'w')
+
+    def _update_text(self, a, b, c):
+        """update text in label when variable change value"""
+        self["text"] = self._format.format(self._textvariable.get())
 
 
 if __name__ == "__main__":
