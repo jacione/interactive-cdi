@@ -5,7 +5,7 @@ import src.utils as ut
 
 
 class Support2D:
-    def __init__(self, size, initial_oversampling=2):
+    def __init__(self, size, initial_oversampling=1.75):
         self.array = np.zeros((size, size), dtype="?")
         corner = int(round(size * (1 - 1 / initial_oversampling) / 2))
         self.array[corner:-corner, corner:-corner] = True
