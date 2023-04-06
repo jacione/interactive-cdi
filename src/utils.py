@@ -80,7 +80,9 @@ def phase_to_photo_image(image):
     return tk.PhotoImage(width=width, height=height, data=data, format='PPM')
 
 
-def amp_to_photo_image(image):
+def amp_to_photo_image(image, mask=None):
+    if mask is not None:
+        image = np.clip(image, np.min(image), np.max(mask * image))
     image = 255 * normalize(image)
     height, width = image.shape
     data = f'P5 {width} {height} 255 '.encode() + image.astype(np.uint8).tobytes()
