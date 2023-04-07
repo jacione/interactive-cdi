@@ -72,7 +72,7 @@ def fourier_to_photo_image(fs_image):
 
 
 def phase_to_photo_image(image):
-    image = normalize(image)
+    image = (image + np.pi) / (2*np.pi)
     one = np.ones_like(image)
     image = 255 * colors.hsv_to_rgb(np.dstack((image, one, one)))
     height, width = image.shape[:2]

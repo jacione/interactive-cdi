@@ -35,7 +35,7 @@ class Solver:
         self.ds_image = ut.ifft(self.fs_image)
 
     def er_constraint(self):
-        self.ds_image = self.ds_image * self.support.array
+        self.ds_image = self.ds_image * self.support.array + 0.0
 
     def er_iteration(self):
         self.fft()
