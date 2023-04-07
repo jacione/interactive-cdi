@@ -171,7 +171,7 @@ class App:
         self.simulated = True
         self.fourier = True
         self.sim_size = 400
-        self.sample = sample.RandomShapes(self.sim_size, self.sim_seed.get())
+        self.sample = sample.RandomShapes(self.sim_size, self.sim_seed.get(), self.sim_nshapes.get())
         self.solver = phasing.Solver(self.sample.detect())
 
         self.img_left = ut.amp_to_photo_image(np.sqrt(np.abs(self.solver.fs_image)))
