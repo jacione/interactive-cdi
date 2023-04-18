@@ -4,7 +4,7 @@ The main phase retrieval solver class
 Nick Porter
 """
 import numpy as np
-from scipy.ndimage import gaussian_filter
+from scipy.ndimage import gaussian_filter, center_of_mass
 
 import src.utils as ut
 import src.support as support
@@ -14,6 +14,7 @@ class Solver:
     def __init__(self, diffraction):
         self.diffraction = np.array(diffraction)
         self.imsize = self.diffraction.shape[0]
+        self.ctr = self.imsize // 2
         self.support = support.Support2D(self.imsize)
 
         self.fs_image = self.diffraction * np.exp(2j * np.pi * np.random.random((self.imsize, self.imsize)))
@@ -59,10 +60,16 @@ class Solver:
         self.ds_image = ut.normalize(gaussian_filter(np.abs(self.ds_image), sigma)) * \
                         np.exp(1j * gaussian_filter(np.angle(self.ds_image), sigma))
 
+    def center(self):
+        row, col = center_of_mass(self.support.array)
+        rshift = int(self.ctr-row)
+        cshift = int(self.ctr-col)
+        self.support.array = np.roll(self.support.array, (rshift, cshift), axis=(0, 1))
+        self.ds_image = np.roll(self.ds_image, (rshift, cshift), axis=(0, 1))
+
     def remove_twin(self):
-        row, col = np.meshgrid(np.arange(self.imsize), np.arange(self.imsize))
-        self.ds_image[row > self.imsize/2] *= 0
-        self.ds_image[col > self.imsize/2] *= 0
+        self.ds_image[self.ctr:] *= 0
+        self.ds_image[:, self.ctr:] *= 0
 
     def reset(self):
         self.support = support.Support2D(self.imsize)

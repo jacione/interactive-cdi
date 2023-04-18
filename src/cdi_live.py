@@ -1,3 +1,15 @@
+"""
+Live phase retrieval GUI.
+
+NOTES:
+    - The main looping feature uses alternating HIO and shrinkwrap algorithms.
+    - There are some pathologically difficult objects, and I don't know why. I'll try to keep a record of which seeds
+    don't reconstruct well:
+        | seed      | shapes    |
+        | 345       | 5         |
+"""
+
+
 import time
 import tkinter as tk
 from tkinter.messagebox import showerror
@@ -31,31 +43,34 @@ class App:
         live_tab = ttk.Frame(control_panel)
         live_tab.grid(row=0, column=0, sticky=tk.NSEW)
 
-        start_button = ttk.Button(live_tab, text="Start", command=self.start)
-        start_button.grid(row=0, column=0, rowspan=2, sticky=tk.NSEW, padx=2, pady=2)
+        self.start_button = ttk.Button(live_tab, text="Start", command=self.start)
+        self.start_button.grid(row=0, column=0, rowspan=2, sticky=tk.NSEW, padx=2, pady=2)
 
-        stop_button = ttk.Button(live_tab, text="Stop", command=self.start)
-        stop_button.grid(row=0, column=1, **btn_kwargs)
+        self.stop_button = ttk.Button(live_tab, text="Stop", command=self.start)
+        self.stop_button.grid(row=0, column=1, **btn_kwargs)
 
-        erstop_button = ttk.Button(live_tab, text="Stop w/ ER", command=self.stop_with_er)
-        erstop_button.grid(row=1, column=1, **btn_kwargs)
+        self.erstop_button = ttk.Button(live_tab, text="Stop w/ ER", command=self.stop_with_er)
+        self.erstop_button.grid(row=1, column=1, **btn_kwargs)
 
         ttk.Separator(live_tab, orient="horizontal").grid(row=2, **sep_kwargs)
 
-        twin_button = ttk.Button(live_tab, text="Remove twin", command=self.remove_twin)
+        twin_button = ttk.Button(live_tab, text="Re-center", command=self.center)
         twin_button.grid(row=5, column=0, columnspan=3, **btn_kwargs)
 
+        twin_button = ttk.Button(live_tab, text="Remove twin", command=self.remove_twin)
+        twin_button.grid(row=6, column=0, columnspan=3, **btn_kwargs)
+
         blur_button = ttk.Button(live_tab, text="Blur", command=self.gaussian_blur)
-        blur_button.grid(row=6, column=0, columnspan=3, **btn_kwargs)
+        blur_button.grid(row=7, column=0, columnspan=3, **btn_kwargs)
 
         reset_button = ttk.Button(live_tab, text="Reset", command=self.restart)
-        reset_button.grid(row=7, column=0, columnspan=3, **btn_kwargs)
+        reset_button.grid(row=8, column=0, columnspan=3, **btn_kwargs)
 
         self.auto_buttons = [twin_button, blur_button, reset_button]
 
         # Parameter controls ##########################################################################################
         params = ttk.LabelFrame(live_tab, text="Parameters", borderwidth=2)
-        params.grid(row=8, column=0, columnspan=2, sticky=tk.S)
+        params.grid(row=9, column=0, columnspan=2, sticky=tk.S)
 
         ttk.Label(params, text="Shrinkwrap", justify=tk.CENTER).grid(row=0, column=0, columnspan=2)
         ttk.Separator(params, orient="vertical").grid(row=0, column=2, rowspan=3, sticky=tk.NS, padx=8)
@@ -166,6 +181,10 @@ class App:
         self.disp_left.image = self.img_left
         self.disp_right.configure(image=self.img_right)
         self.disp_right.image = self.img_right
+
+    def center(self):
+        self.solver.center()
+        self.update_images()
 
     def remove_twin(self):
         self.solver.remove_twin()
