@@ -33,14 +33,14 @@ class App:
         menubar = tk.Menu(self.root)
         self.root.config(menu=menubar)
 
-        control_panel = ttk.Notebook(self.root)
-        control_panel.grid(row=1, column=1, sticky=tk.NSEW)
+        self.control_panel = ttk.Notebook(self.root)
+        self.control_panel.grid(row=1, column=1, sticky=tk.NSEW)
 
         btn_kwargs = {"sticky": tk.EW, "padx": 2, "pady": 2}
         sep_kwargs = {"column": 0, "columnspan": 3, "sticky": tk.EW, "pady": 3}
 
         # Automatic controls ##########################################################################################
-        live_tab = ttk.Frame(control_panel)
+        live_tab = ttk.Frame(self.control_panel)
         live_tab.grid(row=0, column=0, sticky=tk.NSEW)
 
         self.start_button = ttk.Button(live_tab, text="Start", command=self.start)
@@ -95,7 +95,7 @@ class App:
         FormatLabel(params, textvariable=self.hio_beta, format="{:.2f}").grid(row=3, column=3)
 
         # Data controls ###############################################################################################
-        data_tab = ttk.Frame(control_panel)
+        data_tab = ttk.Frame(self.control_panel)
         data_tab.grid(row=0, column=0, stick=tk.EW)
 
         ttk.Label(data_tab, text="Seed (int): ").grid(row=1, column=0, sticky=tk.E)
@@ -128,8 +128,8 @@ class App:
                                                                                 **btn_kwargs)
 
         # Add the tabs to the control panel
-        control_panel.add(live_tab, text="Live")
-        control_panel.add(data_tab, text="Data")
+        self.control_panel.add(live_tab, text="Live")
+        self.control_panel.add(data_tab, text="Data")
 
         # Finally, make the object itself. Start with random shapes.
         impad = 2
@@ -151,6 +151,8 @@ class App:
         self.label_right.grid(row=0, column=2)
         self.disp_right = ttk.Label(self.root, image=self.img_right)
         self.disp_right.grid(row=1, column=2, padx=impad, pady=impad)
+
+        self.control_panel.bind("<<NotebookTabChanged>>", self.update_images)
 
         self.clock = time.perf_counter()
         self.root.mainloop()
@@ -177,9 +179,13 @@ class App:
         if self.is_running:
             self.root.after(10, self.run)
 
-    def update_images(self):
-        self.img_left = ut.amp_to_photo_image(np.abs(self.solver.ds_image), mask=self.solver.support.array)
-        self.img_right = ut.phase_to_photo_image(np.angle(self.solver.ds_image))
+    def update_images(self, *args):
+        if self.control_panel.index("current") == 1:
+            self.img_left = ut.amp_to_photo_image(np.sqrt(np.abs(self.solver.fs_image)))
+            self.img_right = ut.phase_to_photo_image(np.angle(self.solver.fs_image))
+        else:
+            self.img_left = ut.amp_to_photo_image(np.abs(self.solver.ds_image), mask=self.solver.support.array)
+            self.img_right = ut.phase_to_photo_image(np.angle(self.solver.ds_image))
         self.disp_left.configure(image=self.img_left)
         self.disp_left.image = self.img_left
         self.disp_right.configure(image=self.img_right)
