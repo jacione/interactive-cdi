@@ -157,13 +157,16 @@ class App:
 
     def start(self):
         self.is_running = True
+        self.start_button.state(["disabled"])
         self.run()
 
     def stop(self):
         self.is_running = False
+        self.start_button.state(["!disabled"])
 
     def stop_with_er(self):
         self.is_running = False
+        self.start_button.state(["!disabled"])
         self.root.after(10, self.solver.er_iteration)
         self.root.after(15, self.update_images)
 
