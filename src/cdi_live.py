@@ -9,6 +9,9 @@ NOTES:
         | 345       | 5         |
 """
 
+from pathlib import Path
+import sys
+sys.path.append(f"{Path(__file__).parents[1]}")
 
 import time
 import tkinter as tk
