@@ -57,7 +57,7 @@ class App:
         r += 1
         ttk.Label(data_tab, text="Camera: ").grid(row=r, column=0, sticky=tk.E)
         self.sim_bits = tk.StringVar(value="N/A")
-        self.bits_dict = {"Ideal": None} | {f"{b}-bit": (2**b) - 1 for b in [8, 10, 12, 14, 16, 24]}
+        self.bits_dict = {"Ideal": None} | {f"{b}-bit": (2**b) - 1 for b in [8, 10, 12, 14, 16, 20, 24]}
         ttk.OptionMenu(data_tab, self.sim_bits, "Ideal", *self.bits_dict.keys()).grid(row=r, column=1, **btn_kwargs)
 
         r += 1
