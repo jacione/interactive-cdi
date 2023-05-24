@@ -67,6 +67,11 @@ class App:
         ttk.OptionMenu(data_tab, self.sim_sat, "0%", *self.sat_dict.keys()).grid(row=r, column=1, **btn_kwargs)
 
         r += 1
+        ttk.Label(data_tab, text="Summed images: ").grid(row=r, column=0, sticky=tk.E)
+        self.sim_acc = tk.IntVar(data_tab, value=1)
+        ttk.Spinbox(data_tab, from_=1, to=100, textvariable=self.sim_acc, width=5).grid(row=r, column=1, **btn_kwargs)
+
+        r += 1
         ttk.Label(data_tab, text="Angle: ").grid(row=r, column=0, sticky=tk.E)
         self.sim_rot = tk.StringVar(data_tab, value="0%")
         self.rot_dict = {f"{p} deg": p for p in [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]}
@@ -78,7 +83,8 @@ class App:
         self.spl_dict = {"linear": 1, "quadratic": 2, "cubic": 3, "quartic": 4, "quintic": 5}
         ttk.OptionMenu(data_tab, self.sim_spl, "cubic", *self.spl_dict.keys()).grid(row=r, column=1, **btn_kwargs)
 
-        for var in [self.sim_seed, self.sim_nshapes, self.sim_bits, self.sim_sat, self.sim_rot, self.sim_spl]:
+        for var in [self.sim_seed, self.sim_nshapes, self.sim_bits, self.sim_sat, self.sim_acc, self.sim_rot,
+                    self.sim_spl]:
             var.trace("w", self.generate)
 
         r += 1
@@ -103,7 +109,8 @@ class App:
         self.is_running = False
         self.sim_size = 400
         self.sample = sample.RandomShapes(self.sim_size, self.sim_seed.get(), self.sim_nshapes.get())
-        self.solver = phasing.Solver(self.sample.detect(self.sat_dict[self.sim_sat.get()],
+        self.solver = phasing.Solver(self.sample.detect(self.sim_acc.get(),
+                                                        self.sat_dict[self.sim_sat.get()],
                                                         self.bits_dict[self.sim_bits.get()],
                                                         self.rot_dict[self.sim_rot.get()],
                                                         self.spl_dict[self.sim_spl.get()]))
@@ -303,7 +310,8 @@ class App:
         try:
             self.simulated = True
             self.sample = sample.RandomShapes(self.sim_size, self.sim_seed.get(), self.sim_nshapes.get())
-            self.solver.diffraction = self.sample.detect(self.sat_dict[self.sim_sat.get()],
+            self.solver.diffraction = self.sample.detect(self.sim_acc.get(),
+                                                         self.sat_dict[self.sim_sat.get()],
                                                          self.bits_dict[self.sim_bits.get()],
                                                          self.rot_dict[self.sim_rot.get()],
                                                          self.spl_dict[self.sim_spl.get()])

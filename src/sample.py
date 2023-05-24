@@ -24,17 +24,20 @@ class Sample(ABC):
     def diffract(self):
         return np.abs(ut.fft(self.image))**2
 
-    def detect(self, saturation=1.0, max_val=None, angle=0, order=3):
-        img = self.diffract()
-        if max_val is not None:
-            img = max_val * ut.normalize(img)
-            img = RNG.poisson(img)
-        img = np.clip(saturation*img, 0, np.max(img))
-        if max_val is not None:
-            img = np.fix(max_val * ut.normalize(img))
-        if angle != 0:
-            img = transform.rotate(img, angle, order=order)
-        return np.sqrt(img)
+    def detect(self, accums=1, saturation=1.0, max_val=None, angle=0, order=3):
+        output = np.zeros_like(self.diffract())
+        for _ in range(int(accums)):
+            img = self.diffract()
+            if max_val is not None:
+                img = max_val * ut.normalize(img)
+                img = RNG.poisson(img)
+            img = np.clip(saturation*img, 0, np.max(img))
+            if max_val is not None:
+                img = np.fix(max_val * ut.normalize(img))
+            if angle != 0:
+                img = transform.rotate(img, angle, order=order)
+            output += img
+        return np.sqrt(output)
 
     @abstractmethod
     def show(self):
