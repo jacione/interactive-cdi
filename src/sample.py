@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 import skimage.draw as draw
+import skimage.transform as transform
 from matplotlib import pyplot as plt
 
 import src.utils as ut
@@ -23,7 +24,7 @@ class Sample(ABC):
     def diffract(self):
         return np.abs(ut.fft(self.image))**2
 
-    def detect(self, saturation=1.0, max_val=None):
+    def detect(self, saturation=1.0, max_val=None, angle=0, order=3):
         img = self.diffract()
         if max_val is not None:
             img = max_val * ut.normalize(img)
@@ -31,6 +32,8 @@ class Sample(ABC):
         img = np.clip(saturation*img, 0, np.max(img))
         if max_val is not None:
             img = np.fix(max_val * ut.normalize(img))
+        if angle != 0:
+            img = transform.rotate(img, angle, order=order)
         return np.sqrt(img)
 
     @abstractmethod

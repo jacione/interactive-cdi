@@ -43,30 +43,37 @@ class App:
         live_tab = ttk.Frame(self.control_panel)
         live_tab.grid(row=0, column=0, sticky=tk.NSEW)
 
+        r = 0
         self.start_button = ttk.Button(live_tab, text="Start", command=self.start)
-        self.start_button.grid(row=0, column=0, rowspan=2, sticky=tk.NSEW, padx=2, pady=2)
+        self.start_button.grid(row=r, column=0, rowspan=2, sticky=tk.NSEW, padx=2, pady=2)
 
         self.stop_button = ttk.Button(live_tab, text="Stop", command=self.start)
-        self.stop_button.grid(row=0, column=1, **btn_kwargs)
+        self.stop_button.grid(row=r, column=1, **btn_kwargs)
 
+        r += 1
         self.erstop_button = ttk.Button(live_tab, text="Stop w/ ER", command=self.stop_with_er)
-        self.erstop_button.grid(row=1, column=1, **btn_kwargs)
+        self.erstop_button.grid(row=r, column=1, **btn_kwargs)
 
-        ttk.Separator(live_tab, orient="horizontal").grid(row=2, **sep_kwargs)
+        r += 1
+        ttk.Separator(live_tab, orient="horizontal").grid(row=r, **sep_kwargs)
 
-        twin_button = ttk.Button(live_tab, text="Re-center", command=self.center)
-        twin_button.grid(row=5, column=0, columnspan=3, **btn_kwargs)
+        r += 1
+        center_button = ttk.Button(live_tab, text="Re-center", command=self.center)
+        center_button.grid(row=r, column=0, columnspan=3, **btn_kwargs)
 
+        r += 1
         twin_button = ttk.Button(live_tab, text="Remove twin", command=self.remove_twin)
-        twin_button.grid(row=6, column=0, columnspan=3, **btn_kwargs)
+        twin_button.grid(row=r, column=0, columnspan=3, **btn_kwargs)
 
+        r += 1
         blur_button = ttk.Button(live_tab, text="Blur", command=self.gaussian_blur)
-        blur_button.grid(row=7, column=0, columnspan=3, **btn_kwargs)
+        blur_button.grid(row=r, column=0, columnspan=3, **btn_kwargs)
 
+        r += 1
         reset_button = ttk.Button(live_tab, text="Reset", command=self.restart)
-        reset_button.grid(row=8, column=0, columnspan=3, **btn_kwargs)
+        reset_button.grid(row=r, column=0, columnspan=3, **btn_kwargs)
 
-        self.auto_buttons = [twin_button, blur_button, reset_button]
+        self.auto_buttons = [center_button, twin_button, blur_button, reset_button]
 
         # Parameter controls ##########################################################################################
         params = ttk.LabelFrame(live_tab, text="Parameters", borderwidth=2)
@@ -83,7 +90,7 @@ class App:
         FormatLabel(params, textvariable=self.sw_sigma, format="{:.2f}").grid(row=3, column=0)
 
         ttk.Label(params, text="Thresh.", justify=tk.CENTER).grid(row=1, column=1)
-        self.sw_thresh = tk.DoubleVar(value=0.1)
+        self.sw_thresh = tk.DoubleVar(value=0.2)
         sw_thresh_input = ttk.Scale(params, from_=0.5, to=0.0, orient="vertical", variable=self.sw_thresh)
         sw_thresh_input.grid(row=2, column=1, **btn_kwargs)
         FormatLabel(params, textvariable=self.sw_thresh, format="{:.2f}").grid(row=3, column=1)
@@ -96,35 +103,58 @@ class App:
 
         # Data controls ###############################################################################################
         data_tab = ttk.Frame(self.control_panel)
-        data_tab.grid(row=0, column=0, stick=tk.EW)
+        r = 0
+        data_tab.grid(row=r, column=0, stick=tk.EW)
 
-        ttk.Label(data_tab, text="Seed (int): ").grid(row=1, column=0, sticky=tk.E)
+        r += 1
+        ttk.Label(data_tab, text="Seed (int): ").grid(row=r, column=0, sticky=tk.E)
         self.sim_seed = tk.IntVar(value=randint(0, 9999999))
-        ttk.Entry(data_tab, textvariable=self.sim_seed, width=10).grid(row=1, column=1, **btn_kwargs)
+        ttk.Entry(data_tab, textvariable=self.sim_seed, width=10).grid(row=r, column=1, **btn_kwargs)
 
-        ttk.Label(data_tab, text="# of shapes: ").grid(row=2, column=0, sticky=tk.E)
+        r += 1
+        ttk.Label(data_tab, text="# of shapes: ").grid(row=r, column=0, sticky=tk.E)
         self.sim_nshapes = tk.IntVar(value=5)
-        ttk.Entry(data_tab, textvariable=self.sim_nshapes, width=10).grid(row=2, column=1, **btn_kwargs)
+        ttk.Entry(data_tab, textvariable=self.sim_nshapes, width=10).grid(row=r, column=1, **btn_kwargs)
 
-        ttk.Label(data_tab, text="Camera: ").grid(row=3, column=0, sticky=tk.E)
+        r += 1
+        ttk.Label(data_tab, text="Camera: ").grid(row=r, column=0, sticky=tk.E)
         self.sim_bits = tk.StringVar(value="N/A")
         self.bits_dict = {"Ideal": None} | {f"{b}-bit": (2**b) - 1 for b in [8, 10, 12, 14, 16, 24]}
-        ttk.OptionMenu(data_tab, self.sim_bits, "Ideal", *self.bits_dict.keys()).grid(row=3, column=1, **btn_kwargs)
+        ttk.OptionMenu(data_tab, self.sim_bits, "Ideal", *self.bits_dict.keys()).grid(row=r, column=1, **btn_kwargs)
 
-        ttk.Label(data_tab, text="Saturation: ").grid(row=4, column=0, sticky=tk.E)
+        r += 1
+        ttk.Label(data_tab, text="Saturation: ").grid(row=r, column=0, sticky=tk.E)
         self.sim_sat = tk.StringVar(data_tab, value="0%")
         self.sat_dict = {f"{p}%": 1 + (p / 100) for p in [-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50]}
-        ttk.OptionMenu(data_tab, self.sim_sat, "0%", *self.sat_dict.keys()).grid(row=4, column=1, **btn_kwargs)
+        ttk.OptionMenu(data_tab, self.sim_sat, "0%", *self.sat_dict.keys()).grid(row=r, column=1, **btn_kwargs)
 
-        ttk.Button(data_tab, text="Generate data", command=self.generate).grid(row=5, column=0, columnspan=2,
+        r += 1
+        ttk.Label(data_tab, text="Angle: ").grid(row=r, column=0, sticky=tk.E)
+        self.sim_rot = tk.StringVar(data_tab, value="0%")
+        self.rot_dict = {f"{p} deg": p for p in [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]}
+        ttk.OptionMenu(data_tab, self.sim_rot, "0 deg", *self.rot_dict.keys()).grid(row=r, column=1, **btn_kwargs)
+
+        r += 1
+        ttk.Label(data_tab, text="Interp. mode: ").grid(row=r, column=0, sticky=tk.E)
+        self.sim_spl = tk.StringVar(data_tab, value="0%")
+        self.spl_dict = {"linear": 1, "quadratic": 2, "cubic": 3, "quartic": 4, "quintic": 5}
+        ttk.OptionMenu(data_tab, self.sim_spl, "cubic", *self.spl_dict.keys()).grid(row=r, column=1, **btn_kwargs)
+
+        r += 1
+        ttk.Button(data_tab, text="Generate data", command=self.generate).grid(row=r, column=0, columnspan=2,
                                                                                **btn_kwargs)
-        ttk.Button(data_tab, text="Show", command=self.show_sample).grid(row=6, column=0, columnspan=2, **btn_kwargs)
+        r += 1
+        ttk.Button(data_tab, text="Show", command=self.show_sample).grid(row=r, column=0, columnspan=2, **btn_kwargs)
 
-        ttk.Separator(data_tab, orient="horizontal").grid(row=7, **sep_kwargs)
-        ttk.Button(data_tab, text="Load diffraction", command=self.load_data).grid(row=8, column=0, columnspan=2,
+        r += 1
+        ttk.Separator(data_tab, orient="horizontal").grid(row=r, **sep_kwargs)
+        r += 1
+        ttk.Button(data_tab, text="Load diffraction", command=self.load_data).grid(row=r, column=0, columnspan=2,
                                                                                    **btn_kwargs)
-        ttk.Separator(data_tab, orient="horizontal").grid(row=9, **sep_kwargs)
-        ttk.Button(data_tab, text="Save result", command=self.save_result).grid(row=10, column=0, columnspan=2,
+        r += 1
+        ttk.Separator(data_tab, orient="horizontal").grid(row=r, **sep_kwargs)
+        r += 1
+        ttk.Button(data_tab, text="Save result", command=self.save_result).grid(row=r, column=0, columnspan=2,
                                                                                 **btn_kwargs)
 
         # Add the tabs to the control panel
@@ -137,7 +167,10 @@ class App:
         self.is_running = False
         self.sim_size = 400
         self.sample = sample.RandomShapes(self.sim_size, self.sim_seed.get(), self.sim_nshapes.get())
-        self.solver = phasing.Solver(self.sample.detect())
+        self.solver = phasing.Solver(self.sample.detect(self.sat_dict[self.sim_sat.get()],
+                                                        self.bits_dict[self.sim_bits.get()],
+                                                        self.rot_dict[self.sim_rot.get()],
+                                                        self.spl_dict[self.sim_spl.get()]))
 
         self.img_left = ut.amp_to_photo_image(np.abs(self.solver.ds_image))
         self.img_right = ut.phase_to_photo_image(np.angle(self.solver.ds_image))
@@ -207,7 +240,9 @@ class App:
         self.simulated = True
         self.sample = sample.RandomShapes(self.sim_size, self.sim_seed.get(), self.sim_nshapes.get())
         self.solver.diffraction = self.sample.detect(self.sat_dict[self.sim_sat.get()],
-                                                     self.bits_dict[self.sim_bits.get()])
+                                                     self.bits_dict[self.sim_bits.get()],
+                                                     self.rot_dict[self.sim_rot.get()],
+                                                     self.spl_dict[self.sim_spl.get()])
         self.restart()
 
     def show_sample(self):
@@ -228,7 +263,7 @@ class App:
     def restart(self):
         self.hio_beta.set(0.9)
         self.sw_sigma.set(2.0)
-        self.sw_thresh.set(0.1)
+        self.sw_thresh.set(0.2)
         self.solver.reset()
         self.update_images()
 
