@@ -16,22 +16,27 @@ sys.path.append(f"{Path(__file__).parents[1]}")
 import time
 import tkinter as tk
 from tkinter.messagebox import showerror
-from tkinter.filedialog import askopenfilename, asksaveasfilename
+from tkinter.filedialog import asksaveasfilename
 import tkinter.ttk as ttk
-from random import randint
 
 import numpy as np
-from matplotlib.pyplot import imread, imsave
+from matplotlib.pyplot import imsave
 
 import src.phasing as phasing
-import src.sample as sample
+import src.diffraction as diffraction
 import src.utils as ut
+
+# TODO if actual data has been loaded into the app, disable all simulation functions to prevent overwriting
+# TODO move the save reconstruction button to the reconstruction tabs
 
 
 class App:
     def __init__(self):
+        self.data = diffraction.LoadData()
+        self.solver = phasing.Solver(self.data.preprocess())
+
         self.root = tk.Tk()
-        self.root.title("Phase retrieval stepper")
+        self.root.title("Interactive Phase Retrieval (v 0.3)")
 
         menubar = tk.Menu(self.root)
         self.root.config(menu=menubar)
@@ -44,79 +49,55 @@ class App:
 
         # Data controls ###############################################################################################
         data_tab = ttk.Frame(self.control_panel)
+
         r = 0
-        data_tab.grid(row=r, column=0, stick=tk.EW)
-
+        ttk.Button(data_tab, text="Load data", command=self.load_data).grid(row=r, column=0, columnspan=3,
+                                                                              **btn_kwargs)
         r += 1
-        ttk.Label(data_tab, text="Seed (int): ").grid(row=r, column=0, sticky=tk.E)
-        self.sim_seed = tk.IntVar(value=randint(0, 9999999))
-        ttk.Entry(data_tab, textvariable=self.sim_seed, width=10).grid(row=r, column=1, **btn_kwargs)
-
-        r += 1
-        ttk.Label(data_tab, text="# of shapes: ").grid(row=r, column=0, sticky=tk.E)
-        self.sim_nshapes = tk.IntVar(value=5)
-        ttk.Entry(data_tab, textvariable=self.sim_nshapes, width=10).grid(row=r, column=1, **btn_kwargs)
-
-        r += 1
-        ttk.Label(data_tab, text="Camera: ").grid(row=r, column=0, sticky=tk.E)
-        self.sim_bits = tk.StringVar(value="N/A")
-        self.bits_dict = {"Ideal": None} | {f"{b}-bit": (2**b) - 1 for b in [8, 10, 12, 14, 16, 20, 24]}
-        ttk.OptionMenu(data_tab, self.sim_bits, "Ideal", *self.bits_dict.keys()).grid(row=r, column=1, **btn_kwargs)
-
-        r += 1
-        ttk.Label(data_tab, text="Saturation: ").grid(row=r, column=0, sticky=tk.E)
-        self.sim_sat = tk.StringVar(data_tab, value="0%")
-        self.sat_dict = {f"{p}%": 1 + (p / 100) for p in [-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50]}
-        ttk.OptionMenu(data_tab, self.sim_sat, "0%", *self.sat_dict.keys()).grid(row=r, column=1, **btn_kwargs)
-
-        r += 1
-        ttk.Label(data_tab, text="Summed images: ").grid(row=r, column=0, sticky=tk.E)
-        self.sim_acc = tk.IntVar(data_tab, value=1)
-        ttk.Spinbox(data_tab, from_=1, to=100, textvariable=self.sim_acc, width=5).grid(row=r, column=1, **btn_kwargs)
-
-        r += 1
-        ttk.Label(data_tab, text="Angle: ").grid(row=r, column=0, sticky=tk.E)
-        self.sim_rot = tk.StringVar(data_tab, value="0%")
-        self.rot_dict = {f"{p} deg": p for p in [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]}
-        ttk.OptionMenu(data_tab, self.sim_rot, "0 deg", *self.rot_dict.keys()).grid(row=r, column=1, **btn_kwargs)
-
-        r += 1
-        ttk.Label(data_tab, text="Interp. mode: ").grid(row=r, column=0, sticky=tk.E)
-        self.sim_spl = tk.StringVar(data_tab, value="0%")
-        self.spl_dict = {"linear": 1, "quadratic": 2, "cubic": 3, "quartic": 4, "quintic": 5}
-        ttk.OptionMenu(data_tab, self.sim_spl, "cubic", *self.spl_dict.keys()).grid(row=r, column=1, **btn_kwargs)
-
-        for var in [self.sim_seed, self.sim_nshapes, self.sim_bits, self.sim_sat, self.sim_acc, self.sim_rot,
-                    self.sim_spl]:
-            var.trace("w", self.generate)
-
-        r += 1
-        ttk.Button(data_tab, text="Generate data", command=self.generate).grid(row=r, column=0, columnspan=2,
-                                                                               **btn_kwargs)
-        r += 1
-        ttk.Button(data_tab, text="Show", command=self.show_sample).grid(row=r, column=0, columnspan=2, **btn_kwargs)
-
+        ttk.Button(data_tab, text="Load background", command=self.load_bkgd).grid(row=r, column=0, columnspan=3,
+                                                                                  **btn_kwargs)
         r += 1
         ttk.Separator(data_tab, orient="horizontal").grid(row=r, **sep_kwargs)
         r += 1
-        ttk.Button(data_tab, text="Load diffraction", command=self.load_data).grid(row=r, column=0, columnspan=2,
-                                                                                   **btn_kwargs)
+        ttk.Label(data_tab, text="Image processing", font=('Arial', 12, 'underline')).grid(row=r, **sep_kwargs)
         r += 1
-        ttk.Separator(data_tab, orient="horizontal").grid(row=r, **sep_kwargs)
+        self.pre_bkgd = tk.BooleanVar(value=False)
+        ttk.Checkbutton(data_tab, text="Subtract background", variable=self.pre_bkgd).grid(row=r, column=0,
+                                                                                           columnspan=3, **btn_kwargs)
         r += 1
-        ttk.Button(data_tab, text="Save result", command=self.save_result).grid(row=r, column=0, columnspan=2,
-                                                                                **btn_kwargs)
+        self.pre_gauss = tk.BooleanVar(value=False)
+        self.pre_sigma = tk.DoubleVar(value=0.0)
+        ttk.Checkbutton(data_tab, text="Gaussian blur", variable=self.pre_gauss).grid(row=r, column=0, **btn_kwargs)
+        FormatLabel(data_tab, textvariable=self.pre_sigma, format="{:.2f}").grid(row=r, column=1, **btn_kwargs)
+        r += 1
+        ttk.Scale(data_tab, from_=0.0, to=5.0, orient="horizontal", variable=self.pre_sigma).grid(row=r, column=0,
+                                                                                                  columnspan=2,
+                                                                                                  **btn_kwargs)
 
-        # Create the object itself based on these parameters.
-        self.simulated = True
-        self.is_running = False
-        self.sim_size = 400
-        self.sample = sample.RandomShapes(self.sim_size, self.sim_seed.get(), self.sim_nshapes.get())
-        self.solver = phasing.Solver(self.sample.detect(self.sim_acc.get(),
-                                                        self.sat_dict[self.sim_sat.get()],
-                                                        self.bits_dict[self.sim_bits.get()],
-                                                        self.rot_dict[self.sim_rot.get()],
-                                                        self.spl_dict[self.sim_spl.get()]))
+        r += 1
+        self.pre_thresholding = tk.BooleanVar(value=False)
+        self.pre_thresh = tk.DoubleVar(value=0.0)
+        ttk.Checkbutton(data_tab, text="Threshold", variable=self.pre_thresholding).grid(row=r, column=0,
+                                                                                             **btn_kwargs)
+        FormatLabel(data_tab, textvariable=self.pre_thresh, format="{:.2f}").grid(row=r, column=1, **btn_kwargs)
+        r += 1
+        ttk.Scale(data_tab, from_=0.0, to=1.0, orient="horizontal", variable=self.pre_thresh).grid(row=r, column=0,
+                                                                                                   columnspan=2,
+                                                                                                   **btn_kwargs)
+
+        r += 1
+        self.pre_vignette = tk.BooleanVar(value=False)
+        self.pre_vsigma = tk.DoubleVar(value=3)
+        ttk.Checkbutton(data_tab, text="Vignette", variable=self.pre_vignette).grid(row=r, column=0, **btn_kwargs)
+        FormatLabel(data_tab, textvariable=self.pre_vsigma, format="{:.2f}").grid(row=r, column=1, **btn_kwargs)
+        r += 1
+        ttk.Scale(data_tab, from_=3, to=0.1, orient="horizontal", variable=self.pre_vsigma).grid(row=r, column=0,
+                                                                                                 columnspan=2,
+                                                                                                 **btn_kwargs)
+
+        for var in [self.pre_bkgd, self.pre_gauss, self.pre_sigma, self.pre_thresholding, self.pre_thresh,
+                    self.pre_vignette, self.pre_vsigma]:
+            var.trace("w", self.preprocess)
 
         # Manual controls #############################################################################################
         manual_tab = ttk.Frame(self.control_panel)
@@ -149,10 +130,12 @@ class App:
         live_tab = ttk.Frame(self.control_panel)
         live_tab.grid(row=0, column=0, sticky=tk.NSEW)
 
+        self.is_running = False
+
         self.start_button = ttk.Button(live_tab, text="Start", command=self.start)
         self.start_button.grid(row=0, column=0, rowspan=2, sticky=tk.NSEW, padx=2, pady=2)
 
-        self.stop_button = ttk.Button(live_tab, text="Stop", command=self.start)
+        self.stop_button = ttk.Button(live_tab, text="Stop", command=self.stop)
         self.stop_button.grid(row=0, column=1, **btn_kwargs)
 
         self.erstop_button = ttk.Button(live_tab, text="Stop w/ ER", command=self.stop_with_er)
@@ -206,7 +189,7 @@ class App:
         # Finally, make the object itself. Start with random shapes.
         impad = 2
         self.img_left = ut.amp_to_photo_image(np.abs(self.solver.ds_image))
-        self.img_right = ut.phase_to_photo_image(np.angle(self.solver.ds_image))
+        self.img_right = ut.phase_to_photo_image(self.solver.ds_image)
 
         self.label_left = ttk.Label(self.root, text="Amplitude", font=("Arial", 20), justify=tk.CENTER)
         self.label_left.grid(row=0, column=0)
@@ -280,14 +263,14 @@ class App:
             self.stop()
         if self.fourier:
             self.img_left = ut.amp_to_photo_image(np.sqrt(np.abs(self.solver.fs_image)))
-            self.img_right = ut.phase_to_photo_image(np.angle(self.solver.fs_image))
+            self.img_right = ut.phase_to_photo_image(self.solver.fs_image)
             for button in self.ds_buttons:
                 button.state(["disabled"])
             for button in self.fs_buttons:
                 button.state(["!disabled"])
         else:
             self.img_left = ut.amp_to_photo_image(np.abs(self.solver.ds_image), mask=self.solver.support.array)
-            self.img_right = ut.phase_to_photo_image(np.angle(self.solver.ds_image))
+            self.img_right = ut.phase_to_photo_image(self.solver.ds_image)
             for button in self.ds_buttons:
                 button.state(["!disabled"])
             for button in self.fs_buttons:
@@ -309,30 +292,27 @@ class App:
         self.solver.gaussian_blur()
         self.update_images()
 
-    def generate(self, *_):
-        try:
-            self.simulated = True
-            self.sample = sample.RandomShapes(self.sim_size, self.sim_seed.get(), self.sim_nshapes.get())
-            self.solver.diffraction = self.sample.detect(self.sim_acc.get(),
-                                                         self.sat_dict[self.sim_sat.get()],
-                                                         self.bits_dict[self.sim_bits.get()],
-                                                         self.rot_dict[self.sim_rot.get()],
-                                                         self.spl_dict[self.sim_spl.get()])
-            self.restart()
-        except tk.TclError:
-            return
-
-    def show_sample(self):
-        if self.simulated:
-            self.sample.show()
-        else:
-            showerror("Error", "Ground truth knowledge only exists for simulated data.")
-
     def load_data(self):
-        self.simulated = False
-        f = askopenfilename()
-        self.solver.diffraction = imread(f)
+        self.data.load_data()
+        self.preprocess()
         self.restart()
+
+    def load_bkgd(self):
+        self.data.load_bkgd()
+        self.preprocess()
+        self.restart()
+
+    def preprocess(self, *_):
+        self.solver = phasing.Solver(self.data.preprocess(self.pre_bkgd.get(),
+                                                          self.pre_gauss.get(),
+                                                          self.pre_sigma.get(),
+                                                          self.pre_thresholding.get(),
+                                                          self.pre_thresh.get(),
+                                                          self.pre_vignette.get(),
+                                                          self.pre_vsigma.get()
+                                                          )
+                                     )
+        self.update_images()
 
     def save_result(self):
         imsave(asksaveasfilename(defaultextension="png"), np.abs(self.solver.ds_image))
@@ -355,7 +335,8 @@ class FormatLabel(tk.Label):
         self._format = '{}'
         self._textvariable = None
 
-        # get new format and remove it from `kw` so later `super().__init__` doesn't use them (it would get error message)
+        # get new format and remove it from `kw` so later `super().__init__` doesn't use them
+        # (it would get error message)
         if 'format' in kw:
             self._format = kw['format']
             del kw['format']
