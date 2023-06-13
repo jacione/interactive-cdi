@@ -17,7 +17,7 @@ class Solver:
         self.ctr = self.imsize // 2
         self.support = support.Support2D(self.imsize)
 
-        self.fs_image = self.diffraction * np.exp(2j * np.pi * np.random.random((self.imsize, self.imsize)))
+        self.fs_image = self.diffraction * np.exp(2j * np.pi * np.random.random((self.imsize, self.imsize))) + 0.0
         self.ds_image = ut.ifft(self.fs_image)
         self.ds_prev = np.copy(self.ds_image)
 
@@ -73,7 +73,7 @@ class Solver:
 
     def reset(self):
         self.support = support.Support2D(self.imsize)
-        self.fs_image = self.diffraction * np.exp(2j * np.pi * np.random.random((self.imsize, self.imsize)))
+        self.fs_image = self.diffraction * np.exp(2j * np.pi * np.random.random((self.imsize, self.imsize))) + 0.0
         self.ds_image = ut.ifft(self.fs_image)
         self.ds_prev = np.copy(self.ds_image)
 

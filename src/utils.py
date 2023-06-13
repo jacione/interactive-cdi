@@ -72,9 +72,12 @@ def fourier_to_photo_image(fs_image):
 
 
 def phase_to_photo_image(image):
-    image = (image + np.pi) / (2*np.pi)
-    one = np.ones_like(image)
-    image = 255 * colors.hsv_to_rgb(np.dstack((image, one, one)))
+    amp = np.abs(image)
+    phi = np.angle(image)
+    phi = (phi + np.pi) / (2*np.pi)
+    one = np.ones_like(phi)
+    one[amp == 0] = 0
+    image = 255 * colors.hsv_to_rgb(np.dstack((phi, one, one)))
     height, width = image.shape[:2]
     data = f'P6 {width} {height} 255 '.encode() + image.astype(np.uint8).tobytes()
     return tk.PhotoImage(width=width, height=height, data=data, format='PPM')
