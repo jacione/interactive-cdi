@@ -26,7 +26,7 @@ If you are running on Windows, the simplest way to run Interactive CDI is to dow
 
 If you're not on Windows, or if you just want to run Interactive CDI from its Python source code, download the appropriate files from GitHub. Make sure that you have installed Python v3.9 or later. Then run the following (in a virtual environment, if desired):
 
-    pip install numpy scipy scikit-image matplotlib Pillow
+    pip install numpy scipy matplotlib Pillow
 
 Once that's done, you should be able to run the live app:
 
