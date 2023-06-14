@@ -105,6 +105,9 @@ Iterative phase retrieval is, well, iterative. As such, it can get tedious to do
 
 **Save results**: Opens a dialog to select a directory in which to save the current state of the reconstruction. You are strongly encouraged to create a new folder, as it will overwrite existing output files. Once a directory is selected, it will save seven files: an amplitude, phase, and composite image for direct space, the same for reciprocal space, and a raw numpy array file containing the actual complex values in direct space.
 
+## How to contribute
+For bug tracking and feature requests, just use the issues tab on GitHub. If you want to contribute more directly, feel free to fork the repository and submit a pull request. Be aware that the release version is compiled using PyInstaller, which [only supports certain packages](https://github.com/pyinstaller/pyinstaller/wiki/Supported-Packages). In particular, `scikit-image` is not supported, so image processing must be done using something else. Most (if not all) of `scikit-image`'s functionality can be replicated with `scipy.ndimage`.
+
 [^1]: Ware, M. and Peatross, J. (2015) ‘Fraunhofer Approximation’, sec 10.4 in _Physics of Light and Optics_, pp. 264–265. Available at: https://optics.byu.edu/textbook.
 
 [^2]: Marchesini, S. et al. (2003) ‘X-ray image reconstruction from a diffraction pattern alone’, _Physical Review B_, 68(14), p. 140101. Available at: https://doi.org/10.1103/PhysRevB.68.140101.
