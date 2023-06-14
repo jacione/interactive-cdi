@@ -19,7 +19,7 @@ While not designed for high performance, this approach has great educational val
 * A high-school physics teacher could demonstrate the advanced applications of diffraction.
 * A physics lab professor could use it for a coherent diffraction imaging experiment.
 * A new member of a CDI research group could use it to build understanding and intuition applicable to more advanced software.
-* An experienced researcher might still gain new insights by watching phase retrieval occur in realtime.
+* An experienced researcher might still gain new insights by watching phase retrieval occur in realtime. (I know I have...)
 
 ## Installation
 If you are running on Windows, the simplest way to run Interactive CDI is to download and extract the official release, and run the `cdi_live.exe` executable within. As of right now, this software is only compiled for Windows.
