@@ -1,3 +1,4 @@
+[//]: # (TODO: add some pictures to readme)
 # Interactive CDI
 An interactive applet that demonstrates principles of coherent diffraction imaging (CDI), specifically phase retrieval, in a hands-on environment. 
 
@@ -21,7 +22,9 @@ While not designed for high performance, this approach has great educational val
 * An experienced researcher might still gain new insights by watching phase retrieval occur in realtime.
 
 ## Installation
-First, make sure that you have installed Python v3.9 or later. Then run the following (in a virtual environment, if desired):
+If you are running on Windows, the simplest way to run Interactive CDI is to download and extract the official release, and run the `cdi_live.exe` executable within. As of right now, this software is only compiled for Windows.
+
+If you're not on Windows, or if you just want to run Interactive CDI from its Python source code, download the appropriate files from GitHub. Make sure that you have installed Python v3.9 or later. Then run the following (in a virtual environment, if desired):
 
     pip install numpy scipy scikit-image matplotlib Pillow
 
@@ -45,11 +48,13 @@ Depending on the state of the reconstruction and which tab is active, the app wi
 ### The "Data" tab
 This is where you load and pre-process your diffraction pattern. It has the following features:
 
-**Load data**: Opens a dialog to select one or more diffraction image files. If multiple images are selected, they will be summed pixel-wise. Some basic pre-processing is also applied at this stage: (1) color images are converted to grayscale, (2) the brightest point in the image is shifted to the center, (3) if the image is not a square, the long dimension is cropped to match the short dimension, (4) the image is resampled to 400x400 pixels (to keep computational times reasonable), and (5) the square root of the image is taken, which converts intensity to amplitude.
+**Load data**: Opens a dialog to select one or more diffraction image files. If multiple images are selected, they will be summed pixel-wise. Some basic pre-processing is also applied at this stage: (1) color images are converted to grayscale, (2) the brightest point in the image is shifted to the center, (3) if the image is not a square, the long dimension is cropped to match the short dimension, (4) images larger than 1024x1024 pixels are downsampled to that size (to keep computational times reasonable), and (5) the square root of the image is taken, which converts intensity to amplitude.
 
 **Load background**: Opens a dialog to select one or more background image files. These are (ideally) images measured under the exact same conditions as the diffraction data, but without the coherent light source. Such a measurement allows you to characterize the noise in your experiment, e.g. electrical noise in the camera or stray light in the room. The same pre-processing is applied to these images as to the diffraction images, with two exceptions. First, the shifting step re-uses the shift from the diffraction images (that is, it doesn't check for the brightest noise). Second, the background intensity is scaled to match the exposure of the diffraction; for example, if there are 10 summed diffraction images and only 5 background images, the background intensity will be scaled by a factor of 2. _Note that this requires the actual exposure levels to remain constant throughout the experiment._
 
 **Subtract background**: Toggles whether the background is subtracted from the diffraction data. If no background is loaded, this does nothing. Background subtraction is probably the most important pre-processing feature in CDI, and should always be used when possible.
+
+**Bin pixels**: Applies pixel binning (downsampling by summing adjacent pixels) to the image. For sufficiently oversampled data (many pixels per smallest diffraction fringe) this can drastically reduce the computational time of each iteration. However, if the fringes lose fidelity, the reconstruction will fail.
 
 **Gaussian blur**: Applies gaussian blurring to the image. The slider below it adjusts the amount of blurring (gaussian sigma in pixels). This can be useful for smoothing out grainy data, though it is usually better to simply sum over more images.
 
@@ -88,7 +93,7 @@ Iterative phase retrieval is, well, iterative. As such, it can get tedious to do
 
 **Stop**: Completes the current iteration, then stops iterating.
 
-**Stop w/ ER**: Completes the current iteration, performs a single iteration with the ER constraint replacing HIO, then stops iterating.
+**Stop w/ ER**: Completes the current iteration, performs a single iteration with the ER constraint replacing HIO, then stops iterating. If pressed when the reconstruction is not iterating, 
 
 **Re-center**: Shifts the direct-space object so that the center-of-mass of the support region is centered on the image. If currently iterating, this will happen between iterations.
 
@@ -98,7 +103,7 @@ Iterative phase retrieval is, well, iterative. As such, it can get tedious to do
 
 **Reset**: Resets the reconstruction to its initial state, with random phases in reciprocal space and a centered square support region half the size of the image. Also resets the SW and HIO parameters. If currently iterating, this will happen between iterations.
 
-**Parameters**: These three sliders control the gaussian sigma and relative threshold for shrinkwrap as well as the beta coefficient for HIO. They are synced with those on the manual tab.
+**Save results**: Opens a dialog to select a directory in which to save the current state of the reconstruction. You are strongly encouraged to create a new folder, as it will overwrite existing output files. Once a directory is selected, it will save seven files: an amplitude, phase, and composite image for direct space, the same for reciprocal space, and a raw numpy array file containing the actual complex values in direct space.
 
 [^1]: Ware, M. and Peatross, J. (2015) ‘Fraunhofer Approximation’, sec 10.4 in _Physics of Light and Optics_, pp. 264–265. Available at: https://optics.byu.edu/textbook.
 

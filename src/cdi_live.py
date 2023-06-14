@@ -15,8 +15,8 @@ sys.path.append(f"{Path(__file__).parents[1]}")
 
 import time
 import tkinter as tk
-from tkinter.messagebox import showerror
-from tkinter.filedialog import asksaveasfilename
+from tkinter.messagebox import showinfo
+from tkinter.filedialog import askdirectory
 import tkinter.ttk as ttk
 
 import numpy as np
@@ -25,10 +25,6 @@ from matplotlib.pyplot import imsave
 import src.phasing as phasing
 import src.diffraction as diffraction
 import src.utils as ut
-
-# TODO if actual data has been loaded into the app, disable all simulation functions to prevent overwriting
-# TODO move the save reconstruction button to the reconstruction tabs
-
 
 class App:
     def __init__(self):
@@ -65,6 +61,16 @@ class App:
         ttk.Checkbutton(data_tab, text="Subtract background", variable=self.pre_bkgd).grid(row=r, column=0,
                                                                                            columnspan=3, **btn_kwargs)
         r += 1
+        self.pre_binning = tk.BooleanVar(value=False)
+        self.pre_binfact = tk.IntVar(value=1)
+        ttk.Checkbutton(data_tab, text="Bin pixels", variable=self.pre_binning).grid(row=r, column=0, **btn_kwargs)
+        FormatLabel(data_tab, textvariable=self.pre_binfact, format="{:.0f}").grid(row=r, column=1, **btn_kwargs)
+        r += 1
+        ttk.Scale(data_tab, from_=1, to=10, orient="horizontal", variable=self.pre_binfact).grid(row=r, column=0,
+                                                                                                 columnspan=2,
+                                                                                                 **btn_kwargs)
+
+        r += 1
         self.pre_gauss = tk.BooleanVar(value=False)
         self.pre_sigma = tk.DoubleVar(value=0.0)
         ttk.Checkbutton(data_tab, text="Gaussian blur", variable=self.pre_gauss).grid(row=r, column=0, **btn_kwargs)
@@ -78,7 +84,7 @@ class App:
         self.pre_thresholding = tk.BooleanVar(value=False)
         self.pre_thresh = tk.DoubleVar(value=0.0)
         ttk.Checkbutton(data_tab, text="Threshold", variable=self.pre_thresholding).grid(row=r, column=0,
-                                                                                             **btn_kwargs)
+                                                                                         **btn_kwargs)
         FormatLabel(data_tab, textvariable=self.pre_thresh, format="{:.2f}").grid(row=r, column=1, **btn_kwargs)
         r += 1
         ttk.Scale(data_tab, from_=0.0, to=1.0, orient="horizontal", variable=self.pre_thresh).grid(row=r, column=0,
@@ -95,8 +101,8 @@ class App:
                                                                                                  columnspan=2,
                                                                                                  **btn_kwargs)
 
-        for var in [self.pre_bkgd, self.pre_gauss, self.pre_sigma, self.pre_thresholding, self.pre_thresh,
-                    self.pre_vignette, self.pre_vsigma]:
+        for var in [self.pre_bkgd, self.pre_binning, self.pre_binfact, self.pre_gauss, self.pre_sigma,
+                    self.pre_thresholding, self.pre_thresh, self.pre_vignette, self.pre_vsigma]:
             var.trace("w", self.preprocess)
 
         # Manual controls #############################################################################################
@@ -153,6 +159,10 @@ class App:
             btn.grid(row=r, column=0, columnspan=3, **btn_kwargs)
             r += 1
 
+        self.save_msg = True
+        ttk.Button(live_tab, text="Save results", command=self.save_result).grid(row=r, column=0, columnspan=3,
+                                                                                 **btn_kwargs)
+
         # Parameter controls ##########################################################################################
         self.sw_sigma = tk.DoubleVar(value=2.0)
         self.sw_thresh = tk.DoubleVar(value=0.2)
@@ -188,8 +198,9 @@ class App:
 
         # Finally, make the object itself. Start with random shapes.
         impad = 2
-        self.img_left = ut.amp_to_photo_image(np.abs(self.solver.ds_image))
-        self.img_right = ut.phase_to_photo_image(self.solver.ds_image)
+        self.im_size = 450
+        self.img_left = ut.amp_to_photo_image(np.abs(self.solver.ds_image), size=self.im_size)
+        self.img_right = ut.phase_to_photo_image(self.solver.ds_image, size=self.im_size)
 
         self.label_left = ttk.Label(self.root, text="Amplitude", font=("Arial", 20), justify=tk.CENTER)
         self.label_left.grid(row=0, column=0)
@@ -208,7 +219,7 @@ class App:
 
     def man_sw(self):
         self.solver.shrinkwrap(self.sw_sigma.get(), self.sw_thresh.get())
-        self.img_left = ut.amp_to_photo_image(np.uint8(self.solver.support.array))
+        self.img_left = ut.amp_to_photo_image(np.uint8(self.solver.support.array), size=self.im_size)
         self.disp_left.configure(image=self.img_left)
         self.disp_left.image = self.img_left
 
@@ -262,15 +273,16 @@ class App:
         if not i == 2:
             self.stop()
         if self.fourier:
-            self.img_left = ut.amp_to_photo_image(np.sqrt(np.abs(self.solver.fs_image)))
-            self.img_right = ut.phase_to_photo_image(self.solver.fs_image)
+            self.img_left = ut.amp_to_photo_image(np.sqrt(np.abs(self.solver.fs_image)), size=self.im_size)
+            self.img_right = ut.phase_to_photo_image(self.solver.fs_image, size=self.im_size)
             for button in self.ds_buttons:
                 button.state(["disabled"])
             for button in self.fs_buttons:
                 button.state(["!disabled"])
         else:
-            self.img_left = ut.amp_to_photo_image(np.abs(self.solver.ds_image), mask=self.solver.support.array)
-            self.img_right = ut.phase_to_photo_image(self.solver.ds_image)
+            self.img_left = ut.amp_to_photo_image(np.abs(self.solver.ds_image), mask=self.solver.support.array,
+                                                  size=self.im_size)
+            self.img_right = ut.phase_to_photo_image(self.solver.ds_image, size=self.im_size)
             for button in self.ds_buttons:
                 button.state(["!disabled"])
             for button in self.fs_buttons:
@@ -304,6 +316,8 @@ class App:
 
     def preprocess(self, *_):
         self.solver = phasing.Solver(self.data.preprocess(self.pre_bkgd.get(),
+                                                          self.pre_binning.get(),
+                                                          self.pre_binfact.get(),
                                                           self.pre_gauss.get(),
                                                           self.pre_sigma.get(),
                                                           self.pre_thresholding.get(),
@@ -315,7 +329,21 @@ class App:
         self.update_images()
 
     def save_result(self):
-        imsave(asksaveasfilename(defaultextension="png"), np.abs(self.solver.ds_image))
+        if self.save_msg:
+            # Show this message the first time only.
+            showinfo("Info", "Because there are multiple files to save, you will be asked to input a folder rather "
+                             "than simply a file name. It is highly recommended that you create a new folder for "
+                             "these files. If you select a folder that already contains output from this app, "
+                             "the old files WILL be overwritten!")
+            self.save_msg = False
+        save_dir = askdirectory()
+        np.save(f"{save_dir}/ds_raw.npy", self.solver.ds_image)
+        imsave(f"{save_dir}/ds_amplitude.png", np.abs(self.solver.ds_image), cmap="gray")
+        imsave(f"{save_dir}/ds_phase.png", np.angle(self.solver.ds_image), cmap="hsv")
+        imsave(f"{save_dir}/ds_combined.png", ut.complex_composite_image(self.solver.ds_image, dark_background=True))
+        imsave(f"{save_dir}/fs_amplitude.png", np.abs(self.solver.fs_image), cmap="gray")
+        imsave(f"{save_dir}/fs_phase.png", np.angle(self.solver.fs_image), cmap="hsv")
+        imsave(f"{save_dir}/fs_combined.png", ut.complex_composite_image(self.solver.fs_image, dark_background=True))
 
     def restart(self):
         self.hio_beta.set(0.9)

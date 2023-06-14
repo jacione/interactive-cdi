@@ -2,6 +2,7 @@ import tkinter as tk
 
 import numpy as np
 from matplotlib import colors
+import scipy.ndimage as ndi
 
 
 def fft(arr, modulus=False):
@@ -71,7 +72,10 @@ def fourier_to_photo_image(fs_image):
     return tk.PhotoImage(width=width, height=height, data=data, format='PPM')
 
 
-def phase_to_photo_image(image):
+def phase_to_photo_image(image, size=None):
+    if size is not None:
+        ratio = size / image.shape[0]
+        image = ndi.zoom(image, ratio, order=0)
     amp = np.abs(image)
     phi = np.angle(image)
     phi = (phi + np.pi) / (2*np.pi)
@@ -83,9 +87,12 @@ def phase_to_photo_image(image):
     return tk.PhotoImage(width=width, height=height, data=data, format='PPM')
 
 
-def amp_to_photo_image(image, mask=None):
+def amp_to_photo_image(image, mask=None, size=None):
     if mask is not None:
         image = np.clip(image, np.min(image), np.max(mask * image))
+    if size is not None:
+        ratio = size / image.shape[0]
+        image = ndi.zoom(image, ratio, order=0)
     image = 255 * normalize(image)
     height, width = image.shape
     data = f'P5 {width} {height} 255 '.encode() + image.astype(np.uint8).tobytes()
