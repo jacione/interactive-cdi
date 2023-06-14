@@ -32,7 +32,7 @@ class App:
         self.solver = phasing.Solver(self.data.preprocess())
 
         self.root = tk.Tk()
-        self.root.title("Interactive Phase Retrieval (v 0.3)")
+        self.root.title("Interactive Phase Retrieval (v 0.4)")
 
         menubar = tk.Menu(self.root)
         self.root.config(menu=menubar)
