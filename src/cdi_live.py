@@ -1,12 +1,5 @@
 """
 Live phase retrieval GUI.
-
-NOTES:
-    - The main looping feature uses alternating HIO and shrinkwrap algorithms.
-    - There are some pathologically difficult objects, and I don't know why. I'll try to keep a record of which seeds
-    don't reconstruct well:
-        | seed      | shapes    |
-        | 345       | 5         |
 """
 
 from pathlib import Path
@@ -26,13 +19,14 @@ import src.phasing as phasing
 import src.diffraction as diffraction
 import src.utils as ut
 
+
 class App:
     def __init__(self):
         self.data = diffraction.LoadData()
         self.solver = phasing.Solver(self.data.preprocess())
 
         self.root = tk.Tk()
-        self.root.title("Interactive Phase Retrieval (v 0.4)")
+        self.root.title("Interactive CDI (v0.5)")
 
         menubar = tk.Menu(self.root)
         self.root.config(menu=menubar)
