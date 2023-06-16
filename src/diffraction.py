@@ -81,10 +81,14 @@ class LoadData:
         image = np.copy(self.image)
         if sub_bkgd and self.bkgd is not None:
             image = image - self.bkgd
+            image[image < 0] = 0
         if do_binning:
             image = ndi.zoom(image, 1/binning, order=1)
         if do_gaussian:
             image = ndi.gaussian_filter(image, sigma=sigma)
+        if sub_bkgd and self.bkgd is None:
+            image = image - np.median(image)
+            image[image < 0] = 0
         if do_vign:
             step = image.shape[0] * 1j
             x, y = np.mgrid[-1:1:step, -1:1:step]
