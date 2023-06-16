@@ -89,13 +89,13 @@ class LoadData:
         if sub_bkgd and self.bkgd is None:
             image = image - np.median(image)
             image[image < 0] = 0
+        if do_thresh:
+            image[image < np.quantile(image, thresh)] = 0
         if do_vign:
             step = image.shape[0] * 1j
             x, y = np.mgrid[-1:1:step, -1:1:step]
             mask = np.exp(-(x**2+y**2)/(2*vsigma**2))
             image = image * mask
-        if do_thresh:
-            image[image < np.quantile(image, thresh)] = 0
         return image
 
 
