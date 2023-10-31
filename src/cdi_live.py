@@ -209,6 +209,8 @@ class App:
         self.control_panel.bind("<<NotebookTabChanged>>", self.update_images)
 
         self.clock = time.perf_counter()
+        showinfo("Welcome", "Welcome to Interactive CDI!\n\n"
+                            "If you like this project, please give it a star on GitHub.")
         self.root.mainloop()
 
     def man_sw(self):
