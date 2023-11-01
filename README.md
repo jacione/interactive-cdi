@@ -34,7 +34,7 @@ Once that's done, you should be able to run the live app:
 
 ## Using the applet
 ### Understanding phase retrieval
-Coherent diffraction imaging (CDI) is an indirect imaging method that works by back-propagating the light field in a diffraction pattern to its source. If you know the amplitude and phase of the light at every point in the diffraction plane, you can calculate the amplitude and phase at any other plane. While this is usually a pretty painful calculation, there are some special cases in which it can be greatly simplified. One of these is propagating from a coherently illuminated aperture/object to a far-field diffraction pattern and vice versa, which amounts to a slightly modified Fourier transform.[^1]
+Coherent diffraction imaging (CDI) is an indirect imaging method that works by back-propagating the light field in a diffraction pattern to its source. If you know the amplitude and phase of the light at every point in a plane, you can calculate the amplitude and phase at any other plane. While this is usually a pretty painful calculation, there are some special cases in which it can be greatly simplified. One of these is propagating from a coherently illuminated aperture/object to a far-field diffraction pattern and vice versa, which amounts to a slightly modified Fourier transform.[^1]
 
 Now, if we could measure both the amplitude and phase of the light at each point, reconstructing the object would be easy---just take the Fourier transform of the complex diffraction pattern. However, since we only measure the intensity (amplitude squared) we have to use various phase retrieval algorithms to reconstruct the object. A full description of these algorithms is beyond the scope of a README.
 
