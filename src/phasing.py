@@ -3,6 +3,7 @@ The main phase retrieval solver class
 
 Nick Porter
 """
+from tkinter import TclError
 import numpy as np
 from scipy.ndimage import gaussian_filter, center_of_mass
 
@@ -16,10 +17,16 @@ class Solver:
         self.imsize = self.diffraction.shape[0]
         self.ctr = self.imsize // 2
         self.support = support.Support2D(self.imsize)
+        self.pixel_size = None
 
         self.fs_image = self.diffraction * np.exp(2j * np.pi * np.random.random((self.imsize, self.imsize))) + 0.0
         self.ds_image = ut.ifft(self.fs_image)
         self.ds_prev = np.copy(self.ds_image)
+
+    def set_scale(self, det_pitch, det_dist, wavelength):
+        det_dist *= 10**-3  # Convert mm -> um
+        wavelength *= 10**3  # Convert nm -> um
+        self.pixel_size = (det_dist * wavelength) / (det_pitch * self.imsize)
 
     def run_recipe(self, recipe):
 

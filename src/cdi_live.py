@@ -14,10 +14,17 @@ import tkinter.ttk as ttk
 
 import numpy as np
 from matplotlib.pyplot import imsave
+from matplotlib.backend_bases import key_press_handler
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 import src.phasing as phasing
 import src.diffraction as diffraction
 import src.utils as ut
+
+
+DATA = 0
+MANUAL = 1
+AUTO = 2
 
 
 class App:
@@ -26,7 +33,7 @@ class App:
         self.solver = phasing.Solver(self.data.preprocess())
 
         self.root = tk.Tk()
-        self.root.title("Interactive CDI (v0.5)")
+        self.root.title("Interactive Phase Retrieval (v 0.6)")
 
         menubar = tk.Menu(self.root)
         self.root.config(menu=menubar)
@@ -47,6 +54,30 @@ class App:
         ttk.Button(data_tab, text="Load background", command=self.load_bkgd).grid(row=r, column=0, columnspan=3,
                                                                                   **btn_kwargs)
         r += 1
+        self.det_pitch = tk.DoubleVar(value=5.5)
+        self.det_dist = tk.DoubleVar(value=100)
+        self.wavelength = tk.DoubleVar(value=532)
+        params = ttk.LabelFrame(data_tab, text="Detector info", borderwidth=5)
+        params.grid(row=r, column=0, columnspan=3, sticky=tk.S)
+        self.det_params_entries = []  # widgets that are unlocked with the Edit button
+        for row, label, var, unit in zip(
+            [0, 1, 2],
+            ["Pixel pitch : ", "Distance : ", "Wavelength : "],
+            [self.det_pitch, self.det_dist, self.wavelength],
+            ["μm", "mm", "nm"]
+        ):
+            ttk.Label(params, text=label, justify=tk.RIGHT).grid(row=row, column=0, sticky=tk.E)
+            self.det_params_entries.append(ttk.Entry(params, textvariable=var, width=6))
+            self.det_params_entries[-1].grid(row=row, column=1, padx=1)
+            ttk.Label(params, text=unit, justify=tk.CENTER).grid(row=row, column=2)
+        self.det_params_edit_button = ttk.Button(params, text="Edit", command=self.edit_det_params)
+        self.det_params_edit_button.grid(row=3, column=0, **btn_kwargs)
+        self.det_params_lock_button = ttk.Button(params, text="Set", command=self.lock_det_params)
+        self.det_params_lock_button.grid(row=3, column=1, columnspan=2, **btn_kwargs)
+        for widget in [*self.det_params_entries, self.det_params_lock_button]:
+            widget["state"] = "disabled"
+
+        r += 1
         ttk.Separator(data_tab, orient="horizontal").grid(row=r, **sep_kwargs)
         r += 1
         ttk.Label(data_tab, text="Image processing", font=('Arial', 12, 'underline')).grid(row=r, **sep_kwargs)
@@ -55,48 +86,44 @@ class App:
         ttk.Checkbutton(data_tab, text="Subtract background", variable=self.pre_bkgd).grid(row=r, column=0,
                                                                                            columnspan=3, **btn_kwargs)
         r += 1
-        self.pre_binning = tk.BooleanVar(value=False)
-        self.pre_binfact = tk.IntVar(value=1)
-        ttk.Checkbutton(data_tab, text="Bin pixels", variable=self.pre_binning).grid(row=r, column=0, **btn_kwargs)
-        FormatLabel(data_tab, textvariable=self.pre_binfact, format="{:.0f}").grid(row=r, column=1, **btn_kwargs)
+        self.pre_bin_q = tk.BooleanVar(value=False)
+        self.pre_bin_factor = tk.IntVar(value=1)
+        ttk.Checkbutton(data_tab, text="Bin pixels", variable=self.pre_bin_q).grid(row=r, column=0, **btn_kwargs)
+        FormatLabel(data_tab, textvariable=self.pre_bin_factor, format="{:.0f}").grid(row=r, column=1, **btn_kwargs)
         r += 1
-        ttk.Scale(data_tab, from_=1, to=10, orient="horizontal", variable=self.pre_binfact).grid(row=r, column=0,
-                                                                                                 columnspan=2,
-                                                                                                 **btn_kwargs)
+        ttk.Scale(data_tab, from_=1, to=5, orient="horizontal", variable=self.pre_bin_factor).grid(
+            row=r, column=0, columnspan=2, **btn_kwargs)
 
         r += 1
-        self.pre_gauss = tk.BooleanVar(value=False)
-        self.pre_sigma = tk.DoubleVar(value=0.0)
-        ttk.Checkbutton(data_tab, text="Gaussian blur", variable=self.pre_gauss).grid(row=r, column=0, **btn_kwargs)
-        FormatLabel(data_tab, textvariable=self.pre_sigma, format="{:.2f}").grid(row=r, column=1, **btn_kwargs)
+        self.pre_crop_q = tk.BooleanVar(value=False)
+        self.pre_crop_factor = tk.DoubleVar(value=1)
+        ttk.Checkbutton(data_tab, text="Crop pixels", variable=self.pre_crop_q).grid(row=r, column=0, **btn_kwargs)
+        FormatLabel(data_tab, textvariable=self.pre_crop_factor, format="{:.2f}").grid(row=r, column=1, **btn_kwargs)
         r += 1
-        ttk.Scale(data_tab, from_=0.0, to=5.0, orient="horizontal", variable=self.pre_sigma).grid(row=r, column=0,
-                                                                                                  columnspan=2,
-                                                                                                  **btn_kwargs)
+        ttk.Scale(data_tab, from_=1, to=0.1, orient="horizontal", variable=self.pre_crop_factor).grid(
+            row=r, column=0, columnspan=2, **btn_kwargs)
 
         r += 1
-        self.pre_thresholding = tk.BooleanVar(value=False)
-        self.pre_thresh = tk.DoubleVar(value=0.0)
-        ttk.Checkbutton(data_tab, text="Threshold", variable=self.pre_thresholding).grid(row=r, column=0,
-                                                                                         **btn_kwargs)
-        FormatLabel(data_tab, textvariable=self.pre_thresh, format="{:.2f}").grid(row=r, column=1, **btn_kwargs)
+        self.pre_gauss_q = tk.BooleanVar(value=False)
+        self.pre_gauss_sigma = tk.DoubleVar(value=0.0)
+        ttk.Checkbutton(data_tab, text="Gaussian blur", variable=self.pre_gauss_q).grid(row=r, column=0, **btn_kwargs)
+        FormatLabel(data_tab, textvariable=self.pre_gauss_sigma, format="{:.2f}").grid(row=r, column=1, **btn_kwargs)
         r += 1
-        ttk.Scale(data_tab, from_=0.0, to=1.0, orient="horizontal", variable=self.pre_thresh).grid(row=r, column=0,
-                                                                                                   columnspan=2,
-                                                                                                   **btn_kwargs)
+        ttk.Scale(data_tab, from_=0.0, to=5.0, orient="horizontal", variable=self.pre_gauss_sigma).grid(
+            row=r, column=0, columnspan=2, **btn_kwargs)
 
         r += 1
-        self.pre_vignette = tk.BooleanVar(value=False)
-        self.pre_vsigma = tk.DoubleVar(value=3)
-        ttk.Checkbutton(data_tab, text="Vignette", variable=self.pre_vignette).grid(row=r, column=0, **btn_kwargs)
-        FormatLabel(data_tab, textvariable=self.pre_vsigma, format="{:.2f}").grid(row=r, column=1, **btn_kwargs)
+        self.pre_threshold_q = tk.BooleanVar(value=False)
+        self.pre_threshold_val = tk.DoubleVar(value=0.0)
+        ttk.Checkbutton(data_tab, text="Threshold", variable=self.pre_threshold_q).grid(row=r, column=0,
+                                                                                        **btn_kwargs)
+        FormatLabel(data_tab, textvariable=self.pre_threshold_val, format="{:.2f}").grid(row=r, column=1, **btn_kwargs)
         r += 1
-        ttk.Scale(data_tab, from_=3, to=0.1, orient="horizontal", variable=self.pre_vsigma).grid(row=r, column=0,
-                                                                                                 columnspan=2,
-                                                                                                 **btn_kwargs)
+        ttk.Scale(data_tab, from_=0.0, to=1.0, orient="horizontal", variable=self.pre_threshold_val).grid(
+            row=r, column=0, columnspan=2, **btn_kwargs)
 
-        for var in [self.pre_bkgd, self.pre_binning, self.pre_binfact, self.pre_gauss, self.pre_sigma,
-                    self.pre_thresholding, self.pre_thresh, self.pre_vignette, self.pre_vsigma]:
+        for var in [self.pre_bkgd, self.pre_bin_q, self.pre_bin_factor, self.pre_crop_q, self.pre_crop_factor,
+                    self.pre_gauss_q, self.pre_gauss_sigma, self.pre_threshold_q, self.pre_threshold_val]:
             var.trace("w", self.preprocess)
 
         # Manual controls #############################################################################################
@@ -105,8 +132,8 @@ class App:
         self.fourier = True
 
         r = 0
-        names = ["Shrinkwrap", "Hybrid input-output", "Error reduction", "Forward propagate (FFT)"]
-        commands = [self.man_sw, self.man_hio, self.man_er, self.man_fft]
+        names = ["Error reduction", "Hybrid input-output", "Shrinkwrap", "Forward propagate (FFT)"]
+        commands = [self.man_er, self.man_hio, self.man_sw, self.man_fft]
         self.ds_buttons = []
         for name, command in zip(names, commands):
             btn = ttk.Button(manual_tab, text=name, command=command)
@@ -117,8 +144,8 @@ class App:
         ttk.Separator(manual_tab, orient="horizontal").grid(row=r, **sep_kwargs)
         r += 1
 
-        names = ["Back propagate (IFFT)", "Replace modulus"]
-        commands = [self.man_ifft, self.man_mod]
+        names = ["Replace modulus", "Back propagate (IFFT)"]
+        commands = [self.man_mod, self.man_ifft]
         self.fs_buttons = []
         for name, command in zip(names, commands):
             btn = ttk.Button(manual_tab, text=name, command=command)
@@ -209,9 +236,23 @@ class App:
         self.control_panel.bind("<<NotebookTabChanged>>", self.update_images)
 
         self.clock = time.perf_counter()
-        showinfo("Welcome", "Welcome to Interactive CDI!\n\n"
-                            "If you like this project, please give it a star on GitHub.")
+        self.root.update()
+        # showinfo("Welcome", "Welcome to Interactive CDI!\n\n"
+        #                     "If you like this project, please give it a star on GitHub.")
         self.root.mainloop()
+
+    def edit_det_params(self):
+        for entry in self.det_params_entries:
+            entry["state"] = "normal"
+        self.det_params_edit_button["state"] = "disabled"
+        self.det_params_lock_button["state"] = "normal"
+
+    def lock_det_params(self):
+        for entry in self.det_params_entries:
+            entry["state"] = "disabled"
+        self.det_params_edit_button["state"] = "normal"
+        self.det_params_lock_button["state"] = "disabled"
+        self.preprocess()
 
     def man_sw(self):
         self.solver.shrinkwrap(self.sw_sigma.get(), self.sw_thresh.get())
@@ -265,7 +306,7 @@ class App:
 
     def update_images(self, *_):
         i = self.control_panel.index("current")
-        self.fourier = i == 0 or (i == 1 and self.fourier)
+        self.fourier = (i == 0) or (i == 1 and self.fourier)
         if not i == 2:
             self.stop()
         if self.fourier:
@@ -312,16 +353,24 @@ class App:
 
     def preprocess(self, *_):
         self.solver = phasing.Solver(self.data.preprocess(self.pre_bkgd.get(),
-                                                          self.pre_binning.get(),
-                                                          self.pre_binfact.get(),
-                                                          self.pre_gauss.get(),
-                                                          self.pre_sigma.get(),
-                                                          self.pre_thresholding.get(),
-                                                          self.pre_thresh.get(),
-                                                          self.pre_vignette.get(),
-                                                          self.pre_vsigma.get()
+                                                          self.pre_bin_q.get(),
+                                                          self.pre_bin_factor.get(),
+                                                          self.pre_crop_q.get(),
+                                                          self.pre_crop_factor.get(),
+                                                          self.pre_gauss_q.get(),
+                                                          self.pre_gauss_sigma.get(),
+                                                          self.pre_threshold_q.get(),
+                                                          self.pre_threshold_val.get(),
                                                           )
                                      )
+        try:
+            if self.pre_bin_q.get():
+                det_pitch = self.det_pitch.get() * self.pre_bin_factor.get()
+            else:
+                det_pitch = self.det_pitch.get()
+            self.solver.set_scale(det_pitch, self.det_dist.get(), self.wavelength.get())
+        except tk.TclError:
+            self.solver.pixel_size = None
         self.update_images()
 
     def save_result(self):
