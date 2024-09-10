@@ -13,9 +13,9 @@ from tkinter.filedialog import askdirectory
 import tkinter.ttk as ttk
 
 import numpy as np
-from matplotlib.pyplot import imsave
-from matplotlib.backend_bases import key_press_handler
+from matplotlib import pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.patches import Rectangle
 
 import src.phasing as phasing
 import src.diffraction as diffraction
@@ -26,6 +26,7 @@ DATA = 0
 MANUAL = 1
 AUTO = 2
 
+UNITS = {power: unit for power, unit in zip([-4, -3, -2, -1, 0], ["pm", "nm", "μm", "mm", "m"])}
 
 class App:
     def __init__(self):
@@ -91,7 +92,7 @@ class App:
         ttk.Checkbutton(data_tab, text="Bin pixels", variable=self.pre_bin_q).grid(row=r, column=0, **btn_kwargs)
         FormatLabel(data_tab, textvariable=self.pre_bin_factor, format="{:.0f}").grid(row=r, column=1, **btn_kwargs)
         r += 1
-        ttk.Scale(data_tab, from_=1, to=5, orient="horizontal", variable=self.pre_bin_factor).grid(
+        ttk.Scale(data_tab, from_=1, to=8, orient="horizontal", variable=self.pre_bin_factor).grid(
             row=r, column=0, columnspan=2, **btn_kwargs)
 
         r += 1
@@ -219,19 +220,27 @@ class App:
 
         # Finally, make the object itself. Start with random shapes.
         impad = 2
-        self.im_size = 450
-        self.img_left = ut.amp_to_photo_image(np.abs(self.solver.ds_image), size=self.im_size)
-        self.img_right = ut.phase_to_photo_image(self.solver.ds_image, size=self.im_size)
+        self.im_size = 500
+        self.images = [np.abs(self.solver.fs_image), np.angle(self.solver.fs_image)]
+        self.axes = []
+        self.image_canvas = []
+        self.scale_bars = []
+        self.scale_bars_text = []
 
-        self.label_left = ttk.Label(self.root, text="Amplitude", font=("Arial", 20), justify=tk.CENTER)
-        self.label_left.grid(row=0, column=0)
-        self.disp_left = ttk.Label(self.root, image=self.img_left)
-        self.disp_left.grid(row=1, column=0, padx=impad, pady=impad)
-
-        self.label_right = ttk.Label(self.root, text="Phase", font=("Arial", 20), justify=tk.CENTER)
-        self.label_right.grid(row=0, column=2)
-        self.disp_right = ttk.Label(self.root, image=self.img_right)
-        self.disp_right.grid(row=1, column=2, padx=impad, pady=impad)
+        for col, label, image, cmap in zip([0, 2], ["Amplitude", "Phase"], self.images, ["gray", "hsv"]):
+            ttk.Label(self.root, text=label, font=("Arial", 20), justify=tk.CENTER).grid(row=0, column=col)
+            fig = plt.figure(figsize=(1, 1), dpi=self.im_size)
+            ax = fig.add_subplot(xticks=[], yticks=[])
+            axim = ax.imshow(image, cmap=cmap, extent=(0, 1, 0, 1), interpolation_stage='rgba')
+            fig.tight_layout(pad=0)
+            cvs = FigureCanvasTkAgg(fig, master=self.root)
+            cvs.get_tk_widget().grid(row=1, column=col, padx=impad, pady=impad)
+            bar = Rectangle((0.04, 0.04), 0.35, 0.06, color='white')
+            ax.add_patch(bar)
+            bar_text = ax.text(0.05, 0.05, "Hello!", fontsize=4)
+            for container, thing in zip([self.axes, self.image_canvas, self.scale_bars, self.scale_bars_text],
+                                        [axim, cvs, bar, bar_text]):
+                container.append(thing)
 
         self.control_panel.bind("<<NotebookTabChanged>>", self.update_images)
 
@@ -253,12 +262,12 @@ class App:
         self.det_params_edit_button["state"] = "normal"
         self.det_params_lock_button["state"] = "disabled"
         self.preprocess()
+        self.update_images()
 
     def man_sw(self):
         self.solver.shrinkwrap(self.sw_sigma.get(), self.sw_thresh.get())
-        self.img_left = ut.amp_to_photo_image(np.uint8(self.solver.support.array), size=self.im_size)
-        self.disp_left.configure(image=self.img_left)
-        self.disp_left.image = self.img_left
+        self.axes[0].set(data=self.solver.support.array, clim=[0, 1])
+        self.image_canvas[0].draw()
 
     def man_hio(self):
         self.solver.hio_constraint(self.hio_beta.get())
@@ -305,29 +314,42 @@ class App:
             self.root.after(10, self.run)
 
     def update_images(self, *_):
-        i = self.control_panel.index("current")
-        self.fourier = (i == 0) or (i == 1 and self.fourier)
-        if not i == 2:
+        pnl = self.control_panel.index("current")
+        self.fourier = (pnl == DATA) or (pnl == MANUAL and self.fourier)
+        if not pnl == AUTO:
             self.stop()
         if self.fourier:
-            self.img_left = ut.amp_to_photo_image(np.sqrt(np.abs(self.solver.fs_image)), size=self.im_size)
-            self.img_right = ut.phase_to_photo_image(self.solver.fs_image, size=self.im_size)
+            self.images = [np.sqrt(np.abs(self.solver.fs_image)), np.angle(self.solver.fs_image)]
             for button in self.ds_buttons:
                 button.state(["disabled"])
             for button in self.fs_buttons:
                 button.state(["!disabled"])
         else:
-            self.img_left = ut.amp_to_photo_image(np.abs(self.solver.ds_image), mask=self.solver.support.array,
-                                                  size=self.im_size)
-            self.img_right = ut.phase_to_photo_image(self.solver.ds_image, size=self.im_size)
+            self.images = [np.abs(self.solver.ds_image), np.angle(self.solver.ds_image)]
             for button in self.ds_buttons:
                 button.state(["!disabled"])
             for button in self.fs_buttons:
                 button.state(["disabled"])
-        self.disp_left.configure(image=self.img_left)
-        self.disp_left.image = self.img_left
-        self.disp_right.configure(image=self.img_right)
-        self.disp_right.image = self.img_right
+        clims = [(0, self.images[0].max()), (-np.pi, np.pi)]
+        width, text = self.auto_scale_bar()
+        for img, ax, canvas, clim, bar, bar_text in zip(self.images, self.axes, self.image_canvas, clims,
+                                                        self.scale_bars, self.scale_bars_text):
+            bar.set(width=width)
+            bar_text.set(text=text)
+            ax.set(data=img, clim=clim)
+            canvas.draw()
+
+    def auto_scale_bar(self):
+        if self.fourier:
+            pixel_size = self.det_pitch.get() * 10**-6
+            if self.pre_bin_q.get():
+                pixel_size *= self.pre_bin_factor.get()
+        else:
+            pixel_size = self.solver.pixel_size
+        number, power = ut.sig_round(self.solver.imsize * 0.35 * pixel_size)
+        width = number * 10 ** power / (pixel_size * self.solver.imsize)
+        text = f"{number}{'0'*(power%3)} {UNITS[power//3]}"
+        return width, text
 
     def center(self):
         self.solver.center()
@@ -383,12 +405,10 @@ class App:
             self.save_msg = False
         save_dir = askdirectory()
         np.save(f"{save_dir}/ds_raw.npy", self.solver.ds_image)
-        imsave(f"{save_dir}/ds_amplitude.png", np.abs(self.solver.ds_image), cmap="gray")
-        imsave(f"{save_dir}/ds_phase.png", np.angle(self.solver.ds_image), cmap="hsv")
-        imsave(f"{save_dir}/ds_combined.png", ut.complex_composite_image(self.solver.ds_image, dark_background=True))
-        imsave(f"{save_dir}/fs_amplitude.png", np.abs(self.solver.fs_image), cmap="gray")
-        imsave(f"{save_dir}/fs_phase.png", np.angle(self.solver.fs_image), cmap="hsv")
-        imsave(f"{save_dir}/fs_combined.png", ut.complex_composite_image(self.solver.fs_image, dark_background=True))
+        for img, space in zip([self.solver.ds_image, self.solver.fs_image], ["ds", "fs"]):
+            plt.imsave(f"{save_dir}/{space}_amplitude.png", np.abs(img), cmap="gray")
+            plt.imsave(f"{save_dir}/{space}_phase.png", np.angle(img), cmap="hsv")
+            plt.imsave(f"{save_dir}/{space}_combined.png", ut.complex_composite_image(img, dark_background=True))
 
     def restart(self):
         self.hio_beta.set(0.9)

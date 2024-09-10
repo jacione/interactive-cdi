@@ -20,11 +20,12 @@ def im_convert(image, ctr=None):
     if image.ndim == 3:
         image = np.sum(image, axis=-1)
 
-    # Find the brightest point in the image
+    # Find the center point in the diffraction pattern
     shape = np.array(image.shape)
     arr_ctr = shape // 2
     if ctr is None:
-        ctr = np.unravel_index(np.argmax(image, axis=None), image.shape)
+        blurred = ndi.gaussian_filter(image, 10)
+        ctr = np.unravel_index(np.argmax(blurred, axis=None), image.shape)
     image = np.roll(image, (arr_ctr[0] - ctr[0], arr_ctr[1] - ctr[1]), axis=(0, 1))
 
     # Crop to a square

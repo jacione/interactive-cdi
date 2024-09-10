@@ -29,16 +29,17 @@ def normalize(arr):
     return (arr - np.min(arr)) / (np.max(arr) - np.min(arr))
 
 
-def pad_to_size(arr, N_new):
+def pad_to_size(arr, n_new):
     # Assuming square array
-    N = arr.shape[0]
-    pad = (N_new - N) // 2
-    if 2*pad + N == N_new:
+    n_old = arr.shape[0]
+    pad = (n_new - n_old) // 2
+    if 2*pad + n_old == n_new:
         return np.pad(arr, ((pad, pad), (pad, pad)))
-    elif 2*pad + N == N_new - 1:
+    elif 2*pad + n_old == n_new - 1:
         return np.pad(arr, ((pad, pad+1), (pad, pad+1)))
     else:
-        raise IndexError(f'Error padding to desired size: N_new={N_new}, N_old={N}, N_pad={pad}, N_out={2*pad + N}')
+        raise IndexError(f'Error padding to desired size: N_new={n_new}, N_old={n_old}, N_pad={pad}, '
+                         f'N_out={2 * pad + n_old}')
 
 
 def complex_composite_image(comp_img, dark_background=False):
@@ -52,51 +53,14 @@ def complex_composite_image(comp_img, dark_background=False):
     return colors.hsv_to_rgb(hsv)
 
 
-def direct_to_photo_image(ds_image):
-    amp = normalize(np.abs(ds_image))
-    phi = normalize(np.angle(ds_image))
-    one = np.ones_like(amp)
-    image = 255 * colors.hsv_to_rgb(np.dstack((phi, one, amp)))
-    height, width = image.shape[:2]
-    data = f'P6 {width} {height} 255 '.encode() + image.astype(np.uint8).tobytes()
-    return tk.PhotoImage(width=width, height=height, data=data, format='PPM')
-
-
-def fourier_to_photo_image(fs_image):
-    amp = normalize(np.log(np.abs(fs_image)+1))
-    phi = normalize(np.angle(fs_image))
-    one = np.ones_like(amp)
-    image = 255 * colors.hsv_to_rgb(np.dstack((phi, one, amp)))
-    height, width = image.shape[:2]
-    data = f'P6 {width} {height} 255 '.encode() + image.astype(np.uint8).tobytes()
-    return tk.PhotoImage(width=width, height=height, data=data, format='PPM')
-
-
-def phase_to_photo_image(image, size=None):
-    if size is not None:
-        ratio = size / image.shape[0]
-        image = ndi.zoom(image, ratio, order=0)
-    amp = np.abs(image)
-    phi = np.angle(image)
-    phi = (phi + np.pi) / (2*np.pi)
-    one = np.ones_like(phi)
-    one[amp == 0] = 0
-    image = 255 * colors.hsv_to_rgb(np.dstack((phi, one, one)))
-    height, width = image.shape[:2]
-    data = f'P6 {width} {height} 255 '.encode() + image.astype(np.uint8).tobytes()
-    return tk.PhotoImage(width=width, height=height, data=data, format='PPM')
-
-
-def amp_to_photo_image(image, mask=None, size=None):
-    if mask is not None:
-        image = np.clip(image, np.min(image), np.max(mask * image))
-    if size is not None:
-        ratio = size / image.shape[0]
-        image = ndi.zoom(image, ratio, order=0)
-    image = 255 * normalize(image)
-    height, width = image.shape
-    data = f'P5 {width} {height} 255 '.encode() + image.astype(np.uint8).tobytes()
-    return tk.PhotoImage(width=width, height=height, data=data, format='PPM')
+def sig_round(x):
+    rounded = np.format_float_positional(x, precision=1, unique=False, fractional=False, trim='-')
+    if '.' in rounded:
+        digit = int(rounded[-1])
+    else:
+        digit = int(rounded[0])
+    power = int(np.floor(np.log10(float(rounded))))
+    return digit, power
 
 
 if __name__ == "__main__":

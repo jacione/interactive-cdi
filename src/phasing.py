@@ -24,9 +24,8 @@ class Solver:
         self.ds_prev = np.copy(self.ds_image)
 
     def set_scale(self, det_pitch, det_dist, wavelength):
-        det_dist *= 10**-3  # Convert mm -> um
-        wavelength *= 10**3  # Convert nm -> um
-        self.pixel_size = (det_dist * wavelength) / (det_pitch * self.imsize)
+        # The units get lumped into the 10**-6 term at the end: (10^-3 * 10^-9 / 10^-6) = 10^-6
+        self.pixel_size = (det_dist * wavelength) / (det_pitch * self.imsize) * 10**-6
 
     def run_recipe(self, recipe):
 
