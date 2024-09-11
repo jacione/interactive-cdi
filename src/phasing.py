@@ -25,7 +25,11 @@ class Solver:
 
     def set_scale(self, det_pitch, det_dist, wavelength):
         # The units get lumped into the 10**-6 term at the end: (10^-3 * 10^-9 / 10^-6) = 10^-6
-        self.pixel_size = (det_dist * wavelength) / (det_pitch * self.imsize) * 10**-6
+        try:
+            self.pixel_size = (det_dist * wavelength) / (det_pitch * self.imsize) * 10**-6
+            assert self.pixel_size > 0
+        except (ZeroDivisionError, AssertionError):
+            self.pixel_size = None
 
     def run_recipe(self, recipe):
 

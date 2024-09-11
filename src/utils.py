@@ -55,12 +55,15 @@ def complex_composite_image(comp_img, dark_background=False):
 
 def sig_round(x):
     rounded = np.format_float_positional(x, precision=1, unique=False, fractional=False, trim='-')
-    if '.' in rounded:
-        digit = int(rounded[-1])
+    if float(rounded) > 0:
+        if '.' in rounded:
+            digit = int(rounded[-1])
+        else:
+            digit = int(rounded[0])
+        power = int(np.floor(np.log10(float(rounded))))
+        return digit, power
     else:
-        digit = int(rounded[0])
-    power = int(np.floor(np.log10(float(rounded))))
-    return digit, power
+        return None, None
 
 
 if __name__ == "__main__":

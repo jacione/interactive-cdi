@@ -245,6 +245,7 @@ class App:
         self.control_panel.bind("<<NotebookTabChanged>>", self.update_images)
 
         self.clock = time.perf_counter()
+        self.preprocess()
         self.root.update()
         # showinfo("Welcome", "Welcome to Interactive CDI!\n\n"
         #                     "If you like this project, please give it a star on GitHub.")
@@ -334,22 +335,28 @@ class App:
         width, text = self.auto_scale_bar()
         for img, ax, canvas, clim, bar, bar_text in zip(self.images, self.axes, self.image_canvas, clims,
                                                         self.scale_bars, self.scale_bars_text):
-            bar.set(width=width)
+            if width == 0:
+                bar.set(visible=False)
+            else:
+                bar.set(width=width, visible=True)
             bar_text.set(text=text)
             ax.set(data=img, clim=clim)
             canvas.draw()
 
     def auto_scale_bar(self):
-        if self.fourier:
-            pixel_size = self.det_pitch.get() * 10**-6
-            if self.pre_bin_q.get():
-                pixel_size *= self.pre_bin_factor.get()
-        else:
-            pixel_size = self.solver.pixel_size
-        number, power = ut.sig_round(self.solver.imsize * 0.35 * pixel_size)
-        width = number * 10 ** power / (pixel_size * self.solver.imsize)
-        text = f"{number}{'0'*(power%3)} {UNITS[power//3]}"
-        return width, text
+        try:
+            if self.fourier:
+                pixel_size = self.det_pitch.get() * 10**-6
+                if self.pre_bin_q.get():
+                    pixel_size *= self.pre_bin_factor.get()
+            else:
+                pixel_size = self.solver.pixel_size
+            number, power = ut.sig_round(self.solver.imsize * 0.35 * pixel_size)
+            width = number * 10 ** power / (pixel_size * self.solver.imsize)
+            text = f"{number}{'0'*(power%3)} {UNITS[power//3]}"
+            return width, text
+        except (tk.TclError, TypeError):
+            return 0, ""
 
     def center(self):
         self.solver.center()
