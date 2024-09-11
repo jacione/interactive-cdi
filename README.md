@@ -1,6 +1,8 @@
 [//]: # (TODO: add some pictures to readme)
 # Interactive CDI
-An interactive applet that demonstrates principles of coherent diffraction imaging (CDI), specifically phase retrieval, in a hands-on environment. 
+An interactive applet that demonstrates principles of coherent diffraction imaging (CDI), specifically phase retrieval, in a hands-on environment.
+
+<img src="./docs/full.png" alt="Screenshot of the applet having reconstructed a four-pinhole aperture">
 
 ## Why is this useful?
 Most coherent image reconstruction software works something like this:
@@ -46,6 +48,9 @@ When you first open the app, it will load one of the simulated example files. Th
 Depending on the state of the reconstruction and which tab is active, the app will show either a direct-space (physical) or a reciprocal-space (diffraction) representation of the illuminated object or aperture. The "Data" tab will always show the reciprocal-space representation, the "Auto" tab will always show the direct-space representation, and the "Manual" tab may show either. Each image has a scale bar showing the size of either the diffraction features (in reciprocal space) or the aperture features (in direct space).
 
 ### The "Data" tab
+
+<img src="./docs/data-tab.png" alt="Image of the data tab" style="float: left; margin-right: 20px">
+
 This is where you load and pre-process your diffraction pattern. It has the following features:
 
 **Load data**: Opens a dialog to select one or more diffraction image files. If multiple images are selected, they will be summed pixel-wise. Some basic pre-processing is also applied at this stage: (1) color images are converted to grayscale, (2) the brightest point in the image is shifted to the center, (3) if the image is not a square, the long dimension is cropped to match the short dimension, (4) images larger than 1024x1024 pixels are downsampled to that size (to keep computational times reasonable), and (5) the square root of the image is taken, which converts intensity to amplitude.
@@ -67,6 +72,9 @@ This is where you load and pre-process your diffraction pattern. It has the foll
 It's worth noting that, while these and other pre-processing steps (which may or may not be implemented in the future) can help make bad data better, they are almost never an adequate substitute for simply getting better data.
 
 ### The "Manual" tab
+
+<img src="./docs/manual-tab.png" alt="Image of the manual tab" style="float: left; margin-right: 20px">
+
 The "Manual" tab lets you control each constraint and projection during the phase retrieval process.
 
 **Error reduction**: Applies the error reduction (ER) constraint[^3] to the direct-space amplitude and phase. The ER constraint sets everything outside the support region to zero. This is a highly convergent method, essentially never taking a step that will increase the error of the reconstruction. However, as is often the case with such optimization techniques, it is also very prone to stagnation.
@@ -84,6 +92,9 @@ The "Manual" tab lets you control each constraint and projection during the phas
 **Parameters**: These three sliders control the gaussian sigma and relative threshold for shrinkwrap as well as the beta coefficient for HIO. They are synced with those on the auto tab.
 
 ### The "Auto" tab
+
+<img src="./docs/auto-tab.png" alt="Image of the auto tab" style="float: left; margin-right: 20px">
+
 Iterative phase retrieval is, well, iterative. As such, it can get tedious to do every step by hand. This tab iterates automatically so that you can watch the reconstruction take place on a much faster timescale. Each iteration is equivalent to the following sequence on the manual tab:
 1. Forward propagate (FFT)
 2. Replace modulus
