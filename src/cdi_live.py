@@ -28,6 +28,7 @@ AUTO = 2
 
 UNITS = {power: unit for power, unit in zip([-4, -3, -2, -1, 0], ["pm", "nm", "μm", "mm", "m"])}
 
+
 class App:
     def __init__(self):
         self.data = diffraction.LoadData()
