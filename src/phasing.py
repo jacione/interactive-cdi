@@ -3,9 +3,8 @@ The main phase retrieval solver class
 
 Nick Porter
 """
-from tkinter import TclError
 import numpy as np
-from scipy.ndimage import gaussian_filter, center_of_mass
+from scipy import ndimage as ndi
 
 import src.utils as ut
 import src.support as support
@@ -67,11 +66,11 @@ class Solver:
         self.support.shrinkwrap(self.ds_image, sigma, threshold)
 
     def gaussian_blur(self, sigma=2.0):
-        self.ds_image = ut.normalize(gaussian_filter(np.abs(self.ds_image), sigma)) * \
-                        np.exp(1j * gaussian_filter(np.angle(self.ds_image), sigma))
+        self.ds_image = ut.normalize(ndi.gaussian_filter(np.abs(self.ds_image), sigma)) * \
+                        np.exp(1j * ndi.gaussian_filter(np.angle(self.ds_image), sigma))
 
     def center(self):
-        row, col = center_of_mass(self.support.array)
+        row, col = ndi.center_of_mass(self.support.array)
         rshift = int(self.ctr-row)
         cshift = int(self.ctr-col)
         self.support.array = np.roll(self.support.array, (rshift, cshift), axis=(0, 1))
