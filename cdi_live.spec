@@ -25,7 +25,7 @@ exe = EXE(
     [],
     exclude_binaries=True,
     name='cdi_live',
-    debug=False,
+    debug="all",
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
