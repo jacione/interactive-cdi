@@ -11,7 +11,9 @@ class Support2D:
         self.array[corner:-corner, corner:-corner] = True
 
     def shrinkwrap(self, image, sigma=1.0, threshold=0.1):
-        self.array = ut.normalize(ndi.gaussian_filter(np.abs(image), sigma)) > threshold
+        # Update the support region to more closely match the reconstructing image.
+        # Remove the following line once you're ready to test!
+        raise NotImplementedError("Implement shrinkwrap in src/support.py")
 
     def where(self, where_true, where_false):
         return np.where(self.array, where_true, where_false)

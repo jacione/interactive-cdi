@@ -5,7 +5,6 @@ from pathlib import Path
 from tkinter.filedialog import askopenfilenames
 
 import numpy as np
-# import skimage.draw as draw
 import scipy.ndimage as ndi
 from PIL import Image
 
@@ -74,30 +73,38 @@ class LoadData:
         else:
             imstack = [np.asarray(Image.open(f)) for f in fs]
             self.bkgd, _ = im_convert(np.sum(imstack, axis=0), self.ctr)
-        # Background subtraction only works when the scale of the background matches the scale of the data.
+        # Background subtraction only works when the scale of the background matches the scale of the data. Since the
+        # images have been square-rooted (see the last line of im_convert) that means that the
         self.bkgd *= np.sqrt(self.n_images / self.n_bkgds)
 
     def preprocess(self, sub_bkgd=False, do_binning=False, binning=1, do_cropping=False, cropping=1, do_gaussian=False,
-                   sigma=1, do_thresh=False, thresh=1, do_vign=False, vsigma=1):
+                   sigma=1, do_thresh=False, thresh=1):
         image = np.copy(self.image)
-        if sub_bkgd and self.bkgd is not None:
-            image = image - self.bkgd
-            image[image < 0] = 0
+        if sub_bkgd:
+            # Background subtraction
+            if self.bkgd is not None:
+                # Subtracting a known background is easy...
+                pass
+            else:
+                # But what if you haven't actually measured a background image?
+                pass
         if do_binning:
-            image = ndi.zoom(image, 1/binning, order=1)
+            # Bin the image.
+            # Hint: the `binning` variable is the number of pixels binned in _each_ dimension. For example, if you want
+            # to combine every 2x2 square of pixels, then set binning=2.
+            pass
         if do_cropping and cropping < 1:
-            n = int(image.shape[0] * (1-cropping) / 2)
-            image = image[n:-n, n:-n]
+            # Crop the image.
+            # Hint: the `cropping` variable is the ratio between the original and cropped image sizes in _each_
+            # dimension. For example, cropping=0.5 will turn a 10x10 image into a 5x5.
+            pass
         if do_gaussian:
-            image = ndi.gaussian_filter(image, sigma=sigma)
-        if sub_bkgd and self.bkgd is None:
-            image = image - np.median(image)
-            image[image < 0] = 0
+            # Apply a gaussian filter to the image.
+            # Hint: https://docs.scipy.org/doc/scipy/reference/ndimage.html
+            pass
         if do_thresh:
-            image[image < np.quantile(image, thresh)] = 0
-        if do_vign:
-            step = image.shape[0] * 1j
-            x, y = np.mgrid[-1:1:step, -1:1:step]
-            mask = np.exp(-(x**2+y**2)/(2*vsigma**2))
-            image = image * mask
+            # Set an amplitude threshold for the image.
+            pass
+        # Remove the following line when you're ready to test!
+        raise NotImplementedError("Preprocessing needs to be implemented in src/diffraction.py")
         return image

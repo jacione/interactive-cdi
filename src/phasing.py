@@ -22,39 +22,28 @@ class Solver:
         self.ds_image = ut.ifft(self.fs_image)
         self.ds_prev = np.copy(self.ds_image)
 
-    def set_scale(self, det_pitch, det_dist, wavelength):
-        # The units get lumped into the 10**-6 term at the end: (10^-3 * 10^-9 / 10^-6) = 10^-6
-        try:
-            self.pixel_size = (det_dist * wavelength) / (det_pitch * self.imsize) * 10**-6
-            assert self.pixel_size > 0
-        except (ZeroDivisionError, AssertionError):
-            self.pixel_size = None
-
-    def run_recipe(self, recipe):
-
-        pass
-
     def fft(self):
-        self.ds_prev = np.copy(self.ds_image)
-        self.fs_image = ut.fft(self.ds_image)
+        # Hint: the HIO constraint will be much easier if you update self.ds_prev here!
+        # Another hint: It might be useful to take a look at some of the functions in src/utils.py
+        raise NotImplementedError("Some solver methods have not been implemented in src/phasing.py!")
 
     def modulus_constraint(self):
-        self.fs_image = self.diffraction * np.exp(1j * np.angle(self.fs_image))
+        raise NotImplementedError("Some solver methods have not been implemented in src/phasing.py!")
 
     def ifft(self):
-        self.ds_image = ut.ifft(self.fs_image)
+        raise NotImplementedError("Some solver methods have not been implemented in src/phasing.py!")
 
     def er_constraint(self):
-        self.ds_image = self.ds_image * self.support.array + 0.0
+        raise NotImplementedError("Some solver methods have not been implemented in src/phasing.py!")
+
+    def hio_constraint(self, beta=0.9):
+        raise NotImplementedError("Some solver methods have not been implemented in src/phasing.py!")
 
     def er_iteration(self):
         self.fft()
         self.modulus_constraint()
         self.ifft()
         self.er_constraint()
-
-    def hio_constraint(self, beta=0.9):
-        self.ds_image = self.support.where(self.ds_image, self.ds_prev - beta*self.ds_image)
 
     def hio_iteration(self, beta=0.9):
         self.fft()
@@ -64,6 +53,14 @@ class Solver:
 
     def shrinkwrap(self, sigma=1.0, threshold=0.1):
         self.support.shrinkwrap(self.ds_image, sigma, threshold)
+
+    def set_scale(self, det_pitch, det_dist, wavelength):
+        # The units get lumped into the 10**-6 term at the end: (10^-3 * 10^-9 / 10^-6) = 10^-6
+        try:
+            self.pixel_size = (det_dist * wavelength) / (det_pitch * self.imsize) * 10**-6
+            assert self.pixel_size > 0
+        except (ZeroDivisionError, AssertionError):
+            self.pixel_size = None
 
     def gaussian_blur(self, sigma=2.0):
         self.ds_image = ut.normalize(ndi.gaussian_filter(np.abs(self.ds_image), sigma)) * \
