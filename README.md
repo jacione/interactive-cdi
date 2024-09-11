@@ -69,11 +69,11 @@ It's worth noting that, while these and other pre-processing steps (which may or
 ### The "Manual" tab
 The "Manual" tab lets you control each constraint and projection during the phase retrieval process.
 
-**Shrinkwrap**: Applies shrinkwrap[^2] to the support region. This sets the support region to include only those pixels above a certain fractional threshold in a gaussian-filtered version of the direct-space amplitude. In effect, this shrinks the support region to fit tightly around the object (hence the name). _Applying shrinkwrap switches the amplitude image to show the updated support region._ So don't panic when it changes. 
+**Error reduction**: Applies the error reduction (ER) constraint[^3] to the direct-space amplitude and phase. The ER constraint sets everything outside the support region to zero. This is a highly convergent method, essentially never taking a step that will increase the error of the reconstruction. However, as is often the case with such optimization techniques, it is also very prone to stagnation.
 
 **Hybrid input-output**: Applies the hybrid input-output (HIO) constraint[^3] to the direct-space amplitude and phase. The HIO constraint sets everything outside the support region to be whatever it was on the previous iteration, minus some fraction (beta) of its value on the current iteration. This provides a feedback which prevents stagnation and can allow the support region to grow if needed. However, by putting energy outside the support region, it prevents itself from strongly converging to any one solution.
 
-**Error reduction**: Applies the error reduction (ER) constraint[^3] to the direct-space amplitude and phase. The ER constraint sets everything outside the support region to zero. This is a highly convergent method, essentially never taking a step that will increase the error of the reconstruction. However, as is often the case with such optimization techniques, it is also very prone to stagnation.
+**Shrinkwrap**: Applies shrinkwrap[^2] to the support region. This sets the support region to include only those pixels above a certain fractional threshold in a gaussian-filtered version of the direct-space amplitude. In effect, this shrinks the support region to fit tightly around the object (hence the name). _Applying shrinkwrap switches the amplitude image to show the updated support region._ So don't panic when it changes. 
 
 **Forward propagate (FFT)**: Projects the current image from direct space to reciprocal space using a fast Fourier transform, or FFT. Pressing this button will also disable all direct-space buttons in this tab, including itself.
 
