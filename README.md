@@ -1,6 +1,6 @@
 [//]: # (TODO: add some pictures to readme)
 # Interactive CDI
-An interactive applet that demonstrates principles of coherent diffraction imaging (CDI), specifically phase retrieval, in a hands-on environment.
+An interactive applet that demonstrates principles of coherent diffraction imaging (CDI), specifically phase retrieval, in a hands-on environment. This software was designed to be used in an advanced undergraduate physics lab, as described in the paper [Coherent diffraction imaging in the undergraduate laboratory](https://doi.org/10.1119/5.0245088).
 
 <img src="./docs/full.png" alt="Screenshot of the applet having reconstructed a four-pinhole aperture">
 
